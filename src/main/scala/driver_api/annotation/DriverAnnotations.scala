@@ -7,7 +7,8 @@ object DriverAnnotations {
   case class Metadata(
     description: String,
     configClass: String,
-    controllerClass: String
+    controllerClass: String,
+    nativeLibs: List[String] = List()
   ) extends StaticAnnotation
 
   trait WithCustomJsonFormat

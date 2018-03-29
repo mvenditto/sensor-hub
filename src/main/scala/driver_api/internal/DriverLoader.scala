@@ -15,149 +15,127 @@ import scala.collection.JavaConverters._
 import scala.reflect.internal.util.ScalaClassLoader
 import scala.reflect.runtime.universe._
 import scala.tools.reflect.ToolBox
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
 import pureconfig._
 import pureconfig.{CamelCase, ConfigFieldMapping, ProductHint}
 import utils.ZipUtils._
+import utils.Implicits._
+import DriverConstants._
+import driver_api.internal.exception.DriverException._
 
-object DriverLoader {
-  org.apache.log4j.BasicConfigurator.configure()
-  private[this] implicit def camelCaseHint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
-
-  val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
-  val mirror = runtimeMirror(cl)
-  lazy val tb = mirror.mkToolBox()
-
-  private val className = "className"
-  private val driverRootPackage = "driver"
-  private val tmpFolder = "sensor_hub_tmp"
-  private val driverClassPattern = new Regex("""driver/([A-Za-z]*).class""", className)
-  private val driverMsgClassPattern = new Regex("""(driver/messages/[A-Za-z]*).class""", className)
-
-  private[this] val logger = LoggerFactory.getLogger("driver-manager")
-
-  ObjectExtractor.overrideClassLoader(cl)
-  createTempDir(tmpFolder).map(deleteOnExit)
-
-  private def loadJar(jar: File): Unit = {
-    logger.debug(s"loading jar: ${jar.getName}")
-    cl.addURL(jar.toURI.toURL)
-  }
-
-  private def extractMetadata(jar: File): Option[Metadata] = {
-
-    val tryExtract = extractTempFile(
-      jar.toPath, Paths.get(tmpFolder, jar.getName.replace('.', '_')).toString, "metadata.conf")
-
-    tryExtract toOption match {
-      case Some((jarTmpDir, metadata)) =>
-        jarTmpDir.deleteOnExit()
-        metadata.deleteOnExit()
-        logger.info(s"OK read metadata $metadata")
-        loadConfigFromFiles[Metadata](Seq(metadata.toPath)).toOption
-      case _ =>
-        None
-    }
-  }
-
-  private def extractJniLibs(jar: File): Unit = {
-    val jniLibs = Paths.get(tmpFolder, jar.getName.replace('.', '_'), "jniLibs").toString
-    extractTempFiles(jar.toPath, jniLibs, list(new ZipFile(jar), "jniLibs").get.toList) foreach {
-      case Success((path, lib)) =>
-        path.deleteOnExit()
-        lib.deleteOnExit()
-        logger.info(s"extracted jniLib $lib")
-      case _ =>
-    }
-  }
-
-  private def extractMetadata2(jar: File): Iterable[Metadata] = {
-    logger.debug(s"extracting metadata from: ${jar.getName}")
-    for {
-      clsName <- driverJarClasses(jar)
-      c = cl.loadClass(s"$driverRootPackage.$clsName")
-      annotation <- runtimeMirror(cl).classSymbol(c).annotations
-      tree = annotation.tree
-      if tree.tpe <:< typeOf[Metadata]
-      _ = logger.debug(s"entry class $clsName @ ${jar.getName}")
-      a =  tb.eval(tb.untypecheck(tree)).asInstanceOf[Metadata]
-    } yield a
-  }
-
-  private def driverJarClasses(jar: File): Iterable[String] = {
-    for {
-      entry <- new JarFile(jar).entries().asScala.toList
-      je = driverClassPattern.findFirstMatchIn(entry.getName)
-      if je.nonEmpty
-      clsName = je.get.group(className)
-    } yield clsName
-  }
-
-  def driverMessageSchemas(jar: File): Map[Class[_], Schema] = {
-    var classes = Seq.empty[Class[_]]
-    val schemas = for {
-      entry <- new JarFile(jar).entries().asScala.toList
-      je <- driverMsgClassPattern.findFirstMatchIn(entry.getName)
-      clsName = je.group(className).replace("/", ".")
-      cls <- Try(cl.loadClass(clsName)).toOption
-      clsSym = mirror.classSymbol(cls)
-      if clsSym.annotations.exists(_.tree.tpe <:< typeOf[Msg])
-      schema = SchemaFactory.default.createSchema(clsSym.toType)
-      _ = logger.debug(s"loaded @Msg from $clsName @ ${jar.getName}")
-      _ = classes :+= cls
-    } yield schema
-
-    classes.zip(schemas).toMap
-  }
-
-  private def compileDriverWithObservables(
-    ctrlClass: Class[_],
-    configClass: Class[_],
-    nativeLibsPath: String
-  ): DeviceController with ObservablesSupport = {
-    logger.debug(s"compiling driver: ${ctrlClass.getCanonicalName}|${configClass.getCanonicalName}")
-    tb.eval(tb.parse(
-      s"""
-      val cfg = new ${configClass.getCanonicalName};
-      cfg.setJniLibPath("$nativeLibsPath");
-      val ctrl = new ${ctrlClass.getCanonicalName}(cfg) with driver_api.ObservablesSupport;
-      ctrl
-      """)).asInstanceOf[DeviceController with ObservablesSupport]
-  }
-
-  def loadDriverFromJar(jar: File): Option[DeviceDriverWrapper] = {
-    for {
-      metadata <- extractMetadata(jar)
-      _ = loadJar(jar)
-      _ = extractJniLibs(jar)
-      configClass = cl.loadClass(metadata.configClass)
-      ctrlClass = cl.loadClass(metadata.controllerClass)
-      jniLibsPath = Paths.get(System.getProperty("java.io.tmpdir"), tmpFolder, jar.getName.replace('.', '_'), "jniLibs").toString
-      controller_ = compileDriverWithObservables(ctrlClass, configClass, jniLibsPath)
-    } yield DeviceDriver(controller_.configurator, controller_)
-  }
-
-
-  def dispose(): Unit = cl.close()
-
-}
 
 object Test extends App {
 
+  /*
   val path = "/home/pps/electrom/scalajs-electron-skeleton/verlet/verlet/sensors-hub/out/artifacts/snowboy_detect_jar/"
   val jarName = "snowboy-detect.jar"
   val cfgName = "hotword_detection.conf"
+  val jarFile = new File(path + jarName)
 
-
-  val drv = DriverLoader.loadDriverFromJar(new File(path + jarName))
-
+  val drv = DriverManager.loadFromJar(jarFile)
+  println(drv)
   drv.foreach(d => {
     d.config.configure(path + cfgName)
-    val ctrl = d.controller.asInstanceOf[DeviceController with EventEmitter]
-    ctrl.init()
-    ctrl.emitters("hotwords").subscribe(hw => println(hw))
-    ctrl.start()
-  })
+    d.controller.init()
+    d.controller.asInstanceOf[DeviceController with EventEmitter]
+      .emitters("hotwords").subscribe(hw => println(hw))
+    d.controller.start()
+  })*/
 
+  val path = "/home/pps/electrom/scalajs-electron-skeleton/verlet/verlet/sensors-hub/out/artifacts/dummy_lcd_display_driver_jar/"
+  val jarName = "dummy-lcd-display-driver.jar"
+  val cfgName = "conf.conf"
+  val jarFile = new File(path + jarName)
+  val drv = DriverManager.loadFromJar(jarFile)
+  println(drv)
+  drv.foreach(d => {
+    d.config.configure(path + cfgName)
+    d.controller.init()
+    //d.controller.propertyStreams("temperature0").subscribe(obs => println(obs))
+    d.controller.start()
+    Thread.sleep(2000)
+    d.controller.asInstanceOf[MessageSupport].send("""{"message":"newText"}""")
+  })
+}
+
+object DriverManager {
+
+  val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
+  private val mirror = runtimeMirror(cl)
+  private lazy val tb = mirror.mkToolBox()
+  private val TmpFolderName = "sensor-hub-tmp"
+  private val tmpFolder = deleteOnExit(createTempDir(TmpFolderName).get)
+
+  org.apache.log4j.BasicConfigurator.configure() // dirty log4j conf for debug purpose TODO
+  private val logger = LoggerFactory.getLogger("driver-manager")
+
+  ObjectExtractor.overrideClassLoader(cl)
+
+  private def addToClassLoader(jar: File): Unit = {
+    logger.info(s"adding ${jar.toPath} to the classLoader")
+    cl.addURL(jar.toURI.toURL)
+  }
+
+  private def tryExtractJniLibs(driver: JarDriver, root: Path): Try[Unit] = {
+    logger.info(s"extracting jniLibs @ $root/jniLibs")
+    Try {
+      deleteOnExit(Files.createDirectory(Paths.get(root, JniLibraryDir)).toFile)
+      val jniLibs = driver.extractJniLibs()
+      if (jniLibs.forall(_.isSuccess)) {
+        jniLibs.foreach(_.get.deleteOnExit())
+        Success()
+      }
+      else Failure(jniLibs.collectFirst{ case Failure(x) => x }
+        .getOrElse(new NativeLibraryDumpException("an error occurred while extracting native libs.")))
+    }
+  }
+
+  private def createDriverTmpDirs(jar: File): Try[Path] = {
+    val path = Paths.get(tmpFolder.getAbsolutePath, jar.getName.replace('.', '_'))
+    logger.info(s"creating tmp directory for driver @ $path")
+    Try{
+      val dir = Files.createDirectory(path)
+      dir.toFile.deleteOnExit()
+      dir
+    }
+  }
+
+  private def compileDriverWithObservables(
+    ctrlClass: Class[_], configClass: Class[_], nativeLibsPath: String): Try[DeviceController with ObservablesSupport] = {
+    Try {
+      logger.info(s"compiling driver: ${ctrlClass.getCanonicalName}|${configClass.getCanonicalName}")
+      tb.eval(tb.parse(
+        s"""
+        val cfg = new ${configClass.getCanonicalName};
+        cfg.setJniLibPath("$nativeLibsPath");
+        val ctrl = new ${ctrlClass.getCanonicalName}(cfg) with driver_api.ObservablesSupport;
+        ctrl
+        """)).asInstanceOf[DeviceController with ObservablesSupport]
+    }
+  }
+
+  def loadFromJar(jar: File): Try[DeviceDriverWrapper] = {
+    for {
+      // create this driver tmp directories
+      root <- createDriverTmpDirs(jar)
+      // try instance the driver, could fail (eg. no metadata.conf in jar root)
+      driver <- JarDriverFactory.tryCreate(jar, root)
+      // load the jar into the classloader
+      _ = addToClassLoader(driver.jar)
+      // delete metadata.conf on exit
+      _ = driver.metadataFile.deleteOnExit()
+      // extract jni libs if any exists (deleted on exit)
+      _ <- tryExtractJniLibs(driver, root)
+      commands <- driver.commandClasses(cl)
+      // get this driver controller class
+      controllerCls <- driver.controllerClass(cl)
+      // get this driver configuration class
+      configCls <- driver.configurationClass(cl)
+      // create a new instance of the controller
+      controller <- compileDriverWithObservables(
+        controllerCls, configCls, Paths.get(root, JniLibraryDir))
+      // if all steps were Ok yield a usable DeviceDriver
+    } yield DeviceDriver(controller.configurator, controller)
+  }
 }

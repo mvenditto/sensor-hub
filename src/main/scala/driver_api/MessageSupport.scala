@@ -1,6 +1,6 @@
 package driver_api
 
-import driver_api.internal.DriverLoader
+import driver_api.internal.DriverManager
 import fi.oph.myscalaschema.SchemaValidatingExtractor.extractFrom
 import fi.oph.myscalaschema.{ExtractionContext, Schema, SchemaFactory}
 import io.reactivex.Maybe
@@ -19,7 +19,7 @@ trait MessageSupport {
   private def optExtractFromSchemas(json: JValue): Option[Any] = {
     for (schemaEntry <- schemas) {
       val(clsName, schema) = schemaEntry
-      val result = extractFrom(json, Class.forName(clsName, true, DriverLoader.cl), schema).toOption
+      val result = extractFrom(json, Class.forName(clsName, true, DriverManager.cl), schema).toOption
       if (result.isDefined) return result
     }
     None

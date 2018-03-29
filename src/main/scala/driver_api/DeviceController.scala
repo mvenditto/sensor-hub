@@ -2,21 +2,15 @@ package driver_api
 
 import driver_api.sensor.SensingApi.{Observation, PropertyObserver}
 import rx.lang.scala.Observable
+import utils.ObservableUtils
 
 trait ObservablesSupport extends DeviceController {
 
   lazy val propertyStreams: Map[String, Observable[Observation]] = (for {
     po <- propertyObservers
-  } yield po.observedProperty.name -> Observable[Observation] { sub => {
-      new Thread(() => {
-        while (true) {
-          if (!sub.isUnsubscribed)
-            sub.onNext(po.procedure())
-        }
-        sub.onCompleted()
-      }).start()
-    }
-  }).toMap
+  } yield
+      po.observedProperty.name -> ObservableUtils.observableFromFunc(po.procedure)
+    ).toMap
 }
 
 

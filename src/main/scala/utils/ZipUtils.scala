@@ -27,14 +27,18 @@ object ZipUtils {
     }
   }
 
+  def extractFiles(src: Path, dst: Path, fileNames: Seq[String]): Iterable[Try[File]] =
+    fileNames.map(extractFile(src, dst, _))
+
+
   def extractTempFiles(src: Path, dstPrefix: String, fileNames: Seq[String]): Iterable[Try[(File,File)]] =
     fileNames.map(extractTempFile(src, dstPrefix, _))
 
-  def createTempDir(name: String): Try[File] = {
+  def createTempDir(name: String, shouldDeleteOnExit:Boolean = true): Try[File] = {
     Try {
       val tmpDir = new File(System.getProperty("java.io.tmpdir"), name)
       tmpDir.mkdir()
-      tmpDir
+      if (shouldDeleteOnExit) deleteOnExit(tmpDir) else tmpDir
     }
   }
 

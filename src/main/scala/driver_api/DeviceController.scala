@@ -16,7 +16,7 @@ trait ObservablesSupport extends DeviceController {
 
 trait DeviceController {
 
-  val configurator: DeviceConfiguration
+  val configurator: DeviceConfigurator
 
   var propertyObservers = Seq.empty[PropertyObserver]
 
@@ -27,7 +27,6 @@ trait DeviceController {
   def stop(): Unit
 
   protected implicit class PORegistrar(op: PropertyObserver) {
-    println(s"register:$op")
     def register(): Unit = propertyObservers  :+= op
   }
 }

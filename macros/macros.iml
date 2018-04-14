@@ -14,5 +14,6 @@
     <orderEntry type="library" name="sbt: com.fasterxml.jackson.core:jackson-core:2.9.2:jar" level="project" />
     <orderEntry type="library" name="sbt: com.fasterxml.jackson.core:jackson-databind:2.9.2:jar" level="project" />
     <orderEntry type="library" name="scala-schema" level="project" />
+    <orderEntry type="module" module-name="sensors-hub" />
   </component>
 </module>

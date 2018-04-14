@@ -1,10 +1,11 @@
 package macros
 
+import driver_api.Msg
+
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox
 
-case class CustomJsonFormat() extends StaticAnnotation
 
 @compileTimeOnly("enable macroparadise")
 class CollectSchemasFrom(packageName: String) extends StaticAnnotation {
@@ -21,31 +22,22 @@ object inputInterface {
         }.head)
     }
 
-    val hasUserDefinedFormat = (s: ClassSymbol) =>
-      s.baseClasses.map(_.fullName).exists(_.split('.').last == "WithCustomJsonFormat")
-
     val types = pack.typeSignature.members collect {
-      case sym: ClassSymbol => sym
-    } filterNot { hasUserDefinedFormat(_) } map {
-      sym =>
-        val name = sym.fullName
-        val numCaseAcc = sym.asClass.selfType.members.collect {
-          case m: MethodSymbol if m.isCaseAccessor => m
-        }.size
-        name -> numCaseAcc
-    }
+      case sym: ClassSymbol =>
+        sym.baseClasses //somehow without this not annotations is detected, side effects??
+        sym
+    } withFilter {
+      _.annotations.exists(_.tree.tpe <:< typeOf[Msg])
+    } map { _.fullName }
 
-    val msgNames = types.map(cls => q"""${cls._1} ->
-      SchemaFactory.default.createSchema(runtimeMirror(getClass.getClassLoader).classSymbol(Class.forName(${cls._1})).toType)""").toList
+    println("detected cmd types:", types)
 
     val result = annottees.map(_.tree).toList match {
-      case q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" :: Nil =>
-        q"""$mods object $tname extends { ..$earlydefns } with ..$parents {
+      case q"$mods class $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" :: Nil =>
+        val cmds = types.map(t => q"Class.forName($t)")
+        q"""$mods class $tname extends { ..$earlydefns } with ..$parents {
           $self => ..$body
-          import fi.oph.myscalaschema.SchemaFactory
-          import scala.collection.immutable.ListMap
-          import scala.reflect.runtime.universe._
-          override val schemas = ListMap(..$msgNames)
+          override val schemas = List(..$cmds)
       }"""
       case _ => c.abort(c.enclosingPosition, "err")
     }

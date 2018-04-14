@@ -2,13 +2,13 @@ package driver_api
 
 trait DeviceDriverWrapper {
 
-  val config: DeviceConfiguration
+  val config: DeviceConfigurator
 
   val controller: DeviceController with ObservablesSupport
 
 }
 
 case class DeviceDriver(
-  config: DeviceConfiguration,
+  config: DeviceConfigurator,
   controller: DeviceController with ObservablesSupport
 ) extends DeviceDriverWrapper

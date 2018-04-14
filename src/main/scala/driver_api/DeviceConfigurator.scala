@@ -3,7 +3,7 @@ package driver_api
 import pureconfig._
 import pureconfig.{ProductHint, CamelCase, ConfigFieldMapping}
 
-trait DeviceConfiguration {
+trait DeviceConfigurator {
 
   protected implicit def camelCaseHint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
 

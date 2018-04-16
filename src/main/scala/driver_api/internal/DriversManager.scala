@@ -28,8 +28,6 @@ object DriversManager {
     .map(_.toURI.toURL)
     .foreach(cl.addURL)
 
-  private val mirror = scala.reflect.runtime.universe.runtimeMirror(cl)
-  private lazy val tb = mirror.mkToolBox()
   private val finder = new ResourceFinder("META-INF/", cl)
   private[this] implicit val logger: Logger = LoggerFactory.getLogger("drivers-manager")
 

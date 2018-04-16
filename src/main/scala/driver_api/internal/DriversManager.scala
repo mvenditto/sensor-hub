@@ -8,12 +8,13 @@ import driver_api.internal.MetadataValidation._
 import driver_api.spi.Driver
 import fi.oph.myscalaschema.extraction.ObjectExtractor
 import org.apache.xbean.finder.ResourceFinder
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
+import utils.LoggingUtils.{logEitherOpt, logTry}
 
 import scala.collection.JavaConverters._
 import scala.reflect.internal.util.ScalaClassLoader
 import scala.tools.reflect.ToolBox
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 object DriversManager {
   org.apache.log4j.BasicConfigurator.configure() // dirty log4j conf for debug purpose TODO
@@ -30,7 +31,7 @@ object DriversManager {
   private val mirror = scala.reflect.runtime.universe.runtimeMirror(cl)
   private lazy val tb = mirror.mkToolBox()
   private val finder = new ResourceFinder("META-INF/", cl)
-  private[this] val logger = LoggerFactory.getLogger("drivers-manager")
+  private[this] implicit val logger: Logger = LoggerFactory.getLogger("drivers-manager")
 
   private var driverPackages = Seq.empty[String]
   private val drivers: Map[String, (DriverMetadata, Class[Driver])] = detectAvailableDrivers()
@@ -63,7 +64,7 @@ object DriversManager {
 
     val availableDrivers = for {
       props <- finder.mapAllProperties(classOf[Driver].getName).asScala
-      metadata <- withLogging(validate(create(props._2)))
+      metadata <- logEitherOpt(validate(create(props._2)))
       if checkNameConflict(metadata.name)
       cls <- tryDriverRegistration(metadata).toOption
     } yield metadata -> cls.asInstanceOf[Class[Driver]]
@@ -82,36 +83,17 @@ object DriversManager {
         cl.loadClass( metadata.descriptorClassName)
       }
     }
-    tryRegistration match {
-      case Failure(t) =>
-        logger.error(s"""driver loading error ${metadata.name}: ${t.getMessage}""")
-      case Success(cls) =>
-        logger.info(s"""loaded driver descriptor: ${metadata.name} :$cls""")
-    }
+
+    logTry(tryRegistration)(
+      err => s"""driver loading error ${metadata.name}: ${err.getMessage}""",
+      cls => s"""loaded driver descriptor: ${metadata.name} :$cls"""
+    )
+
     tryRegistration
   }
 
-  private def withLogging(v: Either[ValidationError, DriverMetadata]): Option[DriverMetadata] = v match {
-    case Left(err) =>
-      logger.error(err.msg)
-      None
-    case Right(metadata) =>
-      Option(metadata)
-  }
-
-  private def debugCompileDriverWithObservables(
-    ctrlClass: Class[_], configClass: Class[_], nativeLibsPath: String): Unit = {
-    tb.eval(tb.parse(
-      s"""
-        val cfg = new ${configClass.getCanonicalName};
-        cfg.setJniLibPath("$nativeLibsPath");
-        val ctrl = new ${ctrlClass.getCanonicalName}(cfg) with driver_api.ObservablesSupport;
-        ctrl
-        """)).asInstanceOf[DeviceController with ObservablesSupport]
-  }
   private def compileDriverWithObservables(
-    ctrlClass: Class[_], configClass: Class[_], nativeLibsPath: String): Try[DeviceController with ObservablesSupport] = {
-    debugCompileDriverWithObservables(ctrlClass,configClass,"")
+    ctrlClass: Class[_], configClass: Class[_], nativeLibsPath: String): Try[DeviceController] = {
     val tryCompile = Try {
       Seq(ctrlClass, configClass) foreach {
         cls =>
@@ -122,19 +104,15 @@ object DriversManager {
             driverPackages :+= cls.getName
           }
       }
-      logger.info(s"compiling driver: ${ctrlClass.getCanonicalName}|${configClass.getCanonicalName}")
-      tb.eval(tb.parse(
-        s"""
-        val cfg = new ${configClass.getCanonicalName};
-        cfg.setJniLibPath("$nativeLibsPath");
-        val ctrl = new ${ctrlClass.getCanonicalName}(cfg) with driver_api.ObservablesSupport;
-        ctrl
-        """)).asInstanceOf[DeviceController with ObservablesSupport]
+      val cfg = configClass.newInstance().asInstanceOf[DeviceConfigurator]
+      cfg.setJniLibPath(nativeLibsPath)
+      ctrlClass.getConstructors.head.newInstance(Seq(cfg):_*).asInstanceOf[DeviceController]
     }
-    tryCompile match {
-      case Failure(err) => logger.error(s"compilation error: ${err.getMessage}")
-      case _ => logger.info(s"compiled: $ctrlClass:$configClass")
-    }
+
+    logTry(tryCompile)(
+      err => s"instantiation error: ${err.getMessage}",
+      _ => s"instantiated driver for: $ctrlClass:$configClass"
+    )
     tryCompile
   }
 }
@@ -142,14 +120,17 @@ object DriversManager {
 object TestServices extends App  {
   ObjectExtractor.overrideClassLoader(DriversManager.cl)
 
-  val d1 = DriversManager.instanceDriver("lcd")
+  val d1 = DriversManager.instanceDriver("driver 1")
+
   println(DriversManager.availableDrivers)
 
   d1.foreach {
     drv =>
       drv.controller.init()
       drv.controller.start()
-      val ctrl = drv.controller.asInstanceOf[DeviceController with CommandsSupport]
-      ctrl.send("""{"message":"Ciao"}""")
+      val ds1 = drv.controller.dataStreams.head
+      ds1.observable.subscribe(obs => println(obs))
+      //ctrl.send("""{"message":"Ciao"}""")
   }
+
 }

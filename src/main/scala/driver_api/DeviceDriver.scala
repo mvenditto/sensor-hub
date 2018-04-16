@@ -4,11 +4,11 @@ trait DeviceDriverWrapper {
 
   val config: DeviceConfigurator
 
-  val controller: DeviceController with ObservablesSupport
+  val controller: DeviceController
 
 }
 
 case class DeviceDriver(
   config: DeviceConfigurator,
-  controller: DeviceController with ObservablesSupport
+  controller: DeviceController
 ) extends DeviceDriverWrapper

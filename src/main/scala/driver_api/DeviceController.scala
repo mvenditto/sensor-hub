@@ -1,24 +1,14 @@
 package driver_api
 
-import driver_api.sensor.SensingApi.{Observation, PropertyObserver}
-import rx.lang.scala.Observable
-import utils.ObservableUtils
-
-trait ObservablesSupport extends DeviceController {
-
-  lazy val propertyStreams: Map[String, Observable[Observation]] = (for {
-    po <- propertyObservers
-  } yield
-      po.observedProperty.name -> ObservableUtils.observableFromFunc(po.procedure)
-    ).toMap
-}
-
+import st.api.SensorThings.DataStream
 
 trait DeviceController {
 
   val configurator: DeviceConfigurator
 
-  var propertyObservers = Seq.empty[PropertyObserver]
+  protected var _dataStreams = Seq.empty[DataStream]
+
+  def dataStreams: Iterable[DataStream] = _dataStreams
 
   def init(): Unit
 
@@ -26,7 +16,4 @@ trait DeviceController {
 
   def stop(): Unit
 
-  protected implicit class PORegistrar(op: PropertyObserver) {
-    def register(): Unit = propertyObservers  :+= op
-  }
 }

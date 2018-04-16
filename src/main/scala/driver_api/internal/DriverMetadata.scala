@@ -21,7 +21,9 @@ object MetadataValidation {
   private val missing: (String) => ValidationError = (fieldName: String) =>
     ValidationError(s"""$fieldName is missing!""")
 
-  case class ValidationError(msg: String) extends Exception(msg)
+  case class ValidationError(msg: String) extends Exception(msg) {
+    override lazy val toString: String = msg
+  }
 
   val validate: (DriverMetadata) => Either[ValidationError, DriverMetadata] = (metadata: DriverMetadata) => {
     if (metadata.name == Unknown) missing(Name)

@@ -1,15 +1,8 @@
 package driver_api
 
-import pureconfig._
-import pureconfig.{ProductHint, CamelCase, ConfigFieldMapping}
-
-trait DeviceConfigurator {
-
-  protected implicit def camelCaseHint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+trait DeviceConfigurator extends Configurator {
 
   private var jniLibPath: Option[String] = Option.empty[String]
-
-  def configure(cfgPath: String): Unit
 
   def getJniLibPath: Option[String] = jniLibPath
 

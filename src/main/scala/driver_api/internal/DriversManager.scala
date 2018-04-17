@@ -1,14 +1,17 @@
 package driver_api.internal
 
 import java.io.File
+import java.net.URI
 
 import driver_api._
 import driver_api.internal.MetadataFactory._
 import driver_api.internal.MetadataValidation._
+import driver_api.sensor.SensorsManager
 import driver_api.spi.Driver
 import fi.oph.myscalaschema.extraction.ObjectExtractor
 import org.apache.xbean.finder.ResourceFinder
 import org.slf4j.{Logger, LoggerFactory}
+import st.api.SensorThings.Encodings
 import utils.LoggingUtils.{logEitherOpt, logTry}
 
 import scala.collection.JavaConverters._
@@ -42,7 +45,7 @@ object DriversManager {
       if driver._1 == name
       desc = driver._2._2.newInstance()
       ctrl <- compileDriverWithObservables(
-        desc.controllerClass, desc.configurationClass, "").toOption
+        name, desc.controllerClass, desc.configurationClass, "").toOption
     } yield DeviceDriver(ctrl.configurator, ctrl)).headOption
   }
 
@@ -90,12 +93,12 @@ object DriversManager {
     tryRegistration
   }
 
-  private def compileDriverWithObservables(
+  private def compileDriverWithObservables(name: String,
     ctrlClass: Class[_], configClass: Class[_], nativeLibsPath: String): Try[DeviceController] = {
     val tryCompile = Try {
       Seq(ctrlClass, configClass) foreach {
         cls =>
-          if (driverPackages.contains(cls.getName)) {
+          if (driverPackages.contains(cls.getName) && !drivers.keys.toSeq.contains(name)) {
             logger.error(s"class name clash: $cls")
             throw new IllegalStateException(s"conflict detected! class $cls already present.")
           } else {
@@ -126,9 +129,22 @@ object TestServices extends App  {
     drv =>
       drv.controller.init()
       drv.controller.start()
-      val ds1 = drv.controller.dataStreams.head
-      ds1.observable.subscribe(obs => println(obs))
-      //ctrl.send("""{"message":"Ciao"}""")
+      println("sensor1")
+      val s1 = SensorsManager.createSensor("test temp sensor", "", Encodings.PDF, new URI(""), drv)
   }
+
+  val d2 = DriversManager.instanceDriver("driver 1")
+
+  d2.foreach {
+    drv =>
+      drv.controller.init()
+      drv.controller.start()
+      println("sensor2")
+      val s1 = SensorsManager.createSensor("test temp sensor2", "", Encodings.PDF, new URI(""), drv)
+  }
+
+  SensorsManager.obsBus.subscribe(println(_))
+
+  println(SensorsManager.sensors)
 
 }

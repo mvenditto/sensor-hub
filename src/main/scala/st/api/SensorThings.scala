@@ -3,6 +3,7 @@ package st.api
 import java.net.URI
 import java.time.{Instant, Period}
 
+import driver_api.DeviceDriverWrapper
 import org.json4s.JsonAST.JValue
 import rx.lang.scala.Observable
 import utils.ObservableUtils
@@ -69,17 +70,21 @@ object SensorThings {
     phenomenonTime: Option[Instant] = None,
     resultTime: Option[Instant] = None
   ) {
+
+    val doObservation: () => Observation = () =>  procedure().copy(parentDataStream = this)
+
     val observable: Observable[Observation] =
-      ObservableUtils.observableFromFunc(procedure)
+      ObservableUtils.observableFromFunc(doObservation)
   }
 
-  case class Sensor(
-    name: String,
-    description: String,
-    dataStreams: Iterable[DataStream],
-    encodingType: Encoding,
-    metadata: URI
-  )
+  case class Sensor private (
+    id: Int, name: String, description: String,
+    encodingType: Encoding, metadata: URI,
+    driver: DeviceDriverWrapper
+  ) {
+    val dataStreams: Iterable[DataStream] =
+      driver.controller.dataStreams.map(_.copy(sensor = this))
+  }
 
   case class ObservedProperty(
     name: String,
@@ -92,12 +97,12 @@ object SensorThings {
     resultTime: Instant,
     result: Any,
     featureOfInterest: FeatureOfInterest,
-    //resultQuality: Iterable[]
+    parentDataStream: DataStream,
     validTime: Option[Period] = None,
     parameters: Option[JValue] = None
   ) {
     override lazy val toString =
-      s"[$phenomenonTime] ~> $result"
+      s"[id:${parentDataStream.sensor.id}][$phenomenonTime] ~> $result"
   }
 
   case class FeatureOfInterest(

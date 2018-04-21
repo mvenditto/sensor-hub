@@ -1,4 +1,4 @@
-package driver_api
+package api.internal
 
 trait DeviceConfigurator extends Configurator {
 

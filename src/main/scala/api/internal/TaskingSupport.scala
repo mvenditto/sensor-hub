@@ -1,16 +1,15 @@
-package driver_api
+package api.internal
 
-import driver_api.internal.DriversManager
 import fi.oph.myscalaschema.SchemaValidatingExtractor.extractFrom
 import fi.oph.myscalaschema.{ExtractionContext, Schema, SchemaFactory}
 import io.reactivex.Maybe
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods.parseOpt
-import scala.reflect.runtime.universe._
 
 import scala.collection.immutable.ListMap
+import scala.reflect.runtime.universe._
 
-trait CommandsSupport {
+trait TaskingSupport {
 
   protected val commandClasses: List[Class[_]] = List.empty[Class[_]]
   private lazy val schemas = ListMap(commandClasses.map(cls => (cls.getName, schemaFromClass(cls))):_*)

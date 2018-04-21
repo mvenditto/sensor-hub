@@ -1,6 +1,6 @@
-package driver_api
+package api.internal
 
-import st.api.SensorThings.DataStream
+import api.sensors.Sensors.DataStream
 
 trait DeviceController {
 

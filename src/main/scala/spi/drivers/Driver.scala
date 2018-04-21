@@ -1,6 +1,6 @@
-package driver_api.spi
+package spi.drivers
 
-import driver_api.{DeviceConfigurator, DeviceController}
+import api.internal.{DeviceConfigurator, DeviceController}
 
 trait Driver {
 
@@ -8,6 +8,6 @@ trait Driver {
 
   val configurationClass: Class[_ <: DeviceConfigurator]
 
-  val schemas: List[Class[_]]
+  val tasks: List[Class[_]]
 
 }

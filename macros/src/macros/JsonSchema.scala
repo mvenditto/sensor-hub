@@ -1,6 +1,6 @@
 package macros
 
-import driver_api.Msg
+import api.internal.Msg
 
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
 import scala.language.experimental.macros
@@ -37,7 +37,7 @@ object inputInterface {
         val cmds = types.map(t => q"Class.forName($t)")
         q"""$mods class $tname extends { ..$earlydefns } with ..$parents {
           $self => ..$body
-          override val schemas = List(..$cmds)
+          override val tasks = List(..$cmds)
       }"""
       case _ => c.abort(c.enclosingPosition, "err")
     }

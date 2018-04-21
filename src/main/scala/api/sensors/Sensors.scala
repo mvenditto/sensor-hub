@@ -1,14 +1,15 @@
-package st.api
+package api.sensors
 
 import java.net.URI
 import java.time.{Instant, Period}
 
-import driver_api.DeviceDriverWrapper
+import api.devices.Devices.Device
+import api.internal.DeviceDriverWrapper
 import org.json4s.JsonAST.JValue
 import rx.lang.scala.Observable
 import utils.ObservableUtils
 
-object SensorThings {
+object Sensors {
 
   case class Encoding(name: String)
 
@@ -65,7 +66,7 @@ object SensorThings {
     observationType: ObservationType,
     observedProperty: ObservedProperty,
     procedure: () => Observation,
-    sensor: Sensor = null,
+    sensor: Device = null,
     observedArea: Option[Any] = None,
     phenomenonTime: Option[Instant] = None,
     resultTime: Option[Instant] = None
@@ -75,15 +76,6 @@ object SensorThings {
 
     val observable: Observable[Observation] =
       ObservableUtils.observableFromFunc(doObservation)
-  }
-
-  case class Sensor private (
-    id: Int, name: String, description: String,
-    encodingType: Encoding, metadata: URI,
-    driver: DeviceDriverWrapper
-  ) {
-    val dataStreams: Iterable[DataStream] =
-      driver.controller.dataStreams.map(_.copy(sensor = this))
   }
 
   case class ObservedProperty(

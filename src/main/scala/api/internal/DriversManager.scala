@@ -1,28 +1,29 @@
-package driver_api.internal
+package api.internal
 
 import java.io.File
 import java.net.URI
 
-import driver_api._
-import driver_api.internal.MetadataFactory._
-import driver_api.internal.MetadataValidation._
-import driver_api.sensor.SensorsManager
-import driver_api.spi.Driver
+import api.sensors.DevicesManager
+import api.internal.MetadataFactory._
+import api.internal.MetadataValidation._
+import api.sensors.Sensors.Encodings
+import fi.oph.myscalaschema.SchemaFactory
+import spi.drivers.Driver
 import fi.oph.myscalaschema.extraction.ObjectExtractor
 import org.apache.xbean.finder.ResourceFinder
 import org.slf4j.{Logger, LoggerFactory}
-import st.api.SensorThings.Encodings
 import utils.LoggingUtils.{logEitherOpt, logTry}
 
 import scala.collection.JavaConverters._
 import scala.reflect.internal.util.ScalaClassLoader
-import scala.tools.reflect.ToolBox
 import scala.util.Try
+
+import scala.reflect.runtime.universe._
 
 object DriversManager {
   org.apache.log4j.BasicConfigurator.configure() // dirty log4j conf for debug purpose TODO
 
-  var driversDir = "/home/pps/electrom/scalajs-electron-skeleton/verlet/verlet/sensors-hub/out/artifacts/ext/"
+  var driversDir = "out/artifacts/ext/"
   val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
 
   new File(driversDir)
@@ -44,9 +45,9 @@ object DriversManager {
       driver <- drivers
       if driver._1 == name
       desc = driver._2._2.newInstance()
-      ctrl <- compileDriverWithObservables(
-        name, desc.controllerClass, desc.configurationClass, "").toOption
-    } yield DeviceDriver(ctrl.configurator, ctrl)).headOption
+      ctrl <- compileDriverWithObservables(name, desc, "").toOption
+      schemas = desc.tasks.map(cls => SchemaFactory.default.createSchema(runtimeMirror(cl).classSymbol(cls).toType))
+    } yield DeviceDriver(ctrl.configurator, ctrl, schemas)).headOption
   }
 
   private def detectAvailableDrivers() : Map[String, (DriverMetadata, Class[Driver])] = {
@@ -81,7 +82,7 @@ object DriversManager {
         throw new IllegalStateException()
       } else {
         driverPackages :+= metadata.descriptorClassName
-        cl.loadClass( metadata.descriptorClassName)
+        cl.loadClass(metadata.descriptorClassName)
       }
     }
 
@@ -93,10 +94,9 @@ object DriversManager {
     tryRegistration
   }
 
-  private def compileDriverWithObservables(name: String,
-    ctrlClass: Class[_], configClass: Class[_], nativeLibsPath: String): Try[DeviceController] = {
+  private def compileDriverWithObservables(name: String, desc: Driver, nativeLibsPath: String): Try[DeviceController] = {
     val tryCompile = Try {
-      Seq(ctrlClass, configClass) foreach {
+      Seq(desc.controllerClass, desc.configurationClass) foreach {
         cls =>
           if (driverPackages.contains(cls.getName) && !drivers.keys.toSeq.contains(name)) {
             logger.error(s"class name clash: $cls")
@@ -105,14 +105,15 @@ object DriversManager {
             driverPackages :+= cls.getName
           }
       }
-      val cfg = configClass.newInstance().asInstanceOf[DeviceConfigurator]
+
+      val cfg = desc.configurationClass.newInstance()
       cfg.setJniLibPath(nativeLibsPath)
-      ctrlClass.getConstructors.head.newInstance(Seq(cfg):_*).asInstanceOf[DeviceController]
+      desc.controllerClass.getConstructors.head.newInstance(Seq(cfg):_*).asInstanceOf[DeviceController]
     }
 
     logTry(tryCompile)(
       err => s"instantiation error: ${err.getMessage}",
-      _ => s"instantiated driver for: $ctrlClass:$configClass"
+      _ => s"instantiated driver for: ${desc.controllerClass}:${desc.configurationClass}"
     )
     tryCompile
   }
@@ -125,12 +126,14 @@ object TestServices extends App  {
 
   println(DriversManager.availableDrivers)
 
+  import org.json4s.jackson.JsonMethods._
+
   d1.foreach {
     drv =>
       drv.controller.init()
       drv.controller.start()
       println("sensor1")
-      val s1 = SensorsManager.createSensor("test temp sensor", "", Encodings.PDF, new URI(""), drv)
+      val s1 = DevicesManager.createSensor("test temp sensor", "", Encodings.PDF, new URI(""), drv)
   }
 
   val d2 = DriversManager.instanceDriver("driver 1")
@@ -140,11 +143,13 @@ object TestServices extends App  {
       drv.controller.init()
       drv.controller.start()
       println("sensor2")
-      val s1 = SensorsManager.createSensor("test temp sensor2", "", Encodings.PDF, new URI(""), drv)
+      val s1 = DevicesManager.createSensor("test temp sensor2", "", Encodings.PDF, new URI(""), drv)
+      s1.tasks.foreach(t => println(t))
   }
 
-  SensorsManager.obsBus.subscribe(println(_))
+  //DevicesManager.obsBus.subscribe(println(_))
 
-  println(SensorsManager.sensors)
+
+  println(DevicesManager.sensors)
 
 }

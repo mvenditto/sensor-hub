@@ -2,7 +2,7 @@ package api.devices
 
 import java.net.URI
 
-import api.actuators.Tasks.TaskingCapability
+import api.tasks.Tasks.TaskingCapability
 import api.internal.DeviceDriverWrapper
 import api.sensors.Sensors.{DataStream, Encoding}
 import org.json4s.JsonDSL._

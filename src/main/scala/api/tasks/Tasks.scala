@@ -1,4 +1,4 @@
-package api.actuators
+package api.tasks
 
 import org.json4s.JValue
 

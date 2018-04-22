@@ -7,6 +7,7 @@ import api.sensors.DevicesManager
 import api.internal.MetadataFactory._
 import api.internal.MetadataValidation._
 import api.sensors.Sensors.Encodings
+import api.tasks.oph.TaskSchemaFactory
 import fi.oph.myscalaschema.SchemaFactory
 import spi.drivers.Driver
 import fi.oph.myscalaschema.extraction.ObjectExtractor
@@ -17,7 +18,6 @@ import utils.LoggingUtils.{logEitherOpt, logTry}
 import scala.collection.JavaConverters._
 import scala.reflect.internal.util.ScalaClassLoader
 import scala.util.Try
-
 import scala.reflect.runtime.universe._
 
 object DriversManager {
@@ -46,7 +46,8 @@ object DriversManager {
       if driver._1 == name
       desc = driver._2._2.newInstance()
       ctrl <- compileDriverWithObservables(name, desc, "").toOption
-      schemas = desc.tasks.map(cls => SchemaFactory.default.createSchema(runtimeMirror(cl).classSymbol(cls).toType))
+      schemas = desc.tasks.map(cls => TaskSchemaFactory.createSchema(runtimeMirror(cl).classSymbol(cls).toType))
+      // SchemaFactory.default.createSchema(runtimeMirror(cl).classSymbol(cls).toType)
     } yield DeviceDriver(ctrl.configurator, ctrl, schemas)).headOption
   }
 

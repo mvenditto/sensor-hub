@@ -1,6 +1,6 @@
 package api.internal
 
-import fi.oph.myscalaschema.Schema
+import api.tasks.TaskSchema
 
 import scala.annotation.StaticAnnotation
 import scala.collection.immutable.ListMap
@@ -9,7 +9,7 @@ case class Msg() extends StaticAnnotation
 
 trait TaskingInterface {
 
-  val supportedTasks: ListMap[String, Schema] = ListMap()
+  val supportedTasks: ListMap[String, TaskSchema] = ListMap()
 
 }
 

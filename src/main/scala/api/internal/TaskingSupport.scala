@@ -1,7 +1,8 @@
 package api.internal
 
-import fi.oph.myscalaschema.SchemaValidatingExtractor.extractFrom
-import fi.oph.myscalaschema.{ExtractionContext, Schema, SchemaFactory}
+import api.tasks.TaskSchema
+import api.tasks.oph.TaskSchemaFactory
+import fi.oph.myscalaschema.{ExtractionContext, SchemaFactory}
 import io.reactivex.Maybe
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods.parseOpt
@@ -17,13 +18,16 @@ trait TaskingSupport {
 
   private[this] implicit val context = ExtractionContext(SchemaFactory.default)
 
-  private def schemaFromClass(cls: Class[_]): Schema =
-    SchemaFactory.default.createSchema(runtimeMirror(getClass.getClassLoader).classSymbol(cls).toType)
+  private def schemaFromClass(cls: Class[_]): TaskSchema =
+    //SchemaFactory.default.createSchema(runtimeMirror(getClass.getClassLoader).classSymbol(cls).toType)
+    TaskSchemaFactory.createSchema(runtimeMirror(getClass.getClassLoader).classSymbol(cls).toType)
+
 
   private def optExtractFromSchemas(json: JValue): Option[Any] = {
     for (schemaEntry <- schemas) {
       val(clsName, schema) = schemaEntry
-      val result = extractFrom(json, Class.forName(clsName, true, DriversManager.cl), schema).toOption
+      val result = schema.extract(json)
+      //extractFrom(json, Class.forName(clsName, true, DriversManager.cl), schema).toOption
       if (result.isDefined) return result
     }
     None

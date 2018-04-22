@@ -1,15 +1,15 @@
 package api.internal
 
-import fi.oph.myscalaschema.Schema
+import api.tasks.TaskSchema
 
 trait DeviceDriverWrapper {
   val config: DeviceConfigurator
   val controller: DeviceController
-  val tasks: Iterable[Schema]
+  val tasks: Iterable[TaskSchema]
 }
 
 case class DeviceDriver(
   config: DeviceConfigurator,
   controller: DeviceController,
-  tasks: Iterable[Schema]
+  tasks: Iterable[TaskSchema]
 ) extends DeviceDriverWrapper

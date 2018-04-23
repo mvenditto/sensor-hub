@@ -7,8 +7,8 @@ import api.sensors.DevicesManager
 import api.internal.MetadataFactory._
 import api.internal.MetadataValidation._
 import api.sensors.Sensors.Encodings
+import api.services.security.permission.DriverManagementPermission
 import api.tasks.oph.TaskSchemaFactory
-import fi.oph.myscalaschema.SchemaFactory
 import spi.drivers.Driver
 import fi.oph.myscalaschema.extraction.ObjectExtractor
 import org.apache.xbean.finder.ResourceFinder
@@ -19,11 +19,12 @@ import scala.collection.JavaConverters._
 import scala.reflect.internal.util.ScalaClassLoader
 import scala.util.Try
 import scala.reflect.runtime.universe._
+import utils.SecurityUtils.securityManager
 
 object DriversManager {
   org.apache.log4j.BasicConfigurator.configure() // dirty log4j conf for debug purpose TODO
 
-  var driversDir = "out/artifacts/ext/"
+  var driversDir = "../ext/drivers/"
   val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
 
   new File(driversDir)
@@ -38,7 +39,10 @@ object DriversManager {
   private var driverPackages = Seq.empty[String]
   private val drivers: Map[String, (DriverMetadata, Class[Driver])] = detectAvailableDrivers()
 
-  def availableDrivers: Iterable[DriverMetadata] = drivers.map(_._2._1)
+  def availableDrivers: Iterable[DriverMetadata] = {
+    securityManager.foreach(sm => sm.checkPermission(DriverManagementPermission("drivers.list")))
+    drivers.map(_._2._1)
+  }
 
   def instanceDriver(name: String): Option[DeviceDriverWrapper] = {
     (for {
@@ -47,7 +51,6 @@ object DriversManager {
       desc = driver._2._2.newInstance()
       ctrl <- compileDriverWithObservables(name, desc, "").toOption
       schemas = desc.tasks.map(cls => TaskSchemaFactory.createSchema(runtimeMirror(cl).classSymbol(cls).toType))
-      // SchemaFactory.default.createSchema(runtimeMirror(cl).classSymbol(cls).toType)
     } yield DeviceDriver(ctrl.configurator, ctrl, schemas)).headOption
   }
 
@@ -148,7 +151,7 @@ object TestServices extends App  {
       s1.tasks.foreach(t => println(t))
   }
 
-  //DevicesManager.obsBus.subscribe(println(_))
+  DevicesManager.obsBus.subscribe(println(_))
 
 
   println(DevicesManager.sensors)

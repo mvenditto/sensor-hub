@@ -6,6 +6,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import api.devices.Devices.Device
 import api.internal.DeviceDriverWrapper
 import api.sensors.Sensors.{Encoding, Observation}
+import api.services.security.permission.DriverManagementPermission
+import macros.permission.GrantWith
 import rx.lang.scala.subjects.PublishSubject
 import rx.lang.scala.{Observable, Subscription}
 

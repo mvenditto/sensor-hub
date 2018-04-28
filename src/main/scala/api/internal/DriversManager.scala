@@ -11,6 +11,7 @@ import api.services.security.permission.DriverManagementPermission
 import api.tasks.oph.TaskSchemaFactory
 import spi.drivers.Driver
 import fi.oph.myscalaschema.extraction.ObjectExtractor
+import macros.permission.GrantWith
 import org.apache.xbean.finder.ResourceFinder
 import org.slf4j.{Logger, LoggerFactory}
 import utils.LoggingUtils.{logEitherOpt, logTry}
@@ -39,8 +40,8 @@ object DriversManager {
   private var driverPackages = Seq.empty[String]
   private val drivers: Map[String, (DriverMetadata, Class[Driver])] = detectAvailableDrivers()
 
+  @GrantWith(classOf[DriverManagementPermission], "drivers.list")
   def availableDrivers: Iterable[DriverMetadata] = {
-    securityManager.foreach(sm => sm.checkPermission(DriverManagementPermission("drivers.list")))
     drivers.map(_._2._1)
   }
 
@@ -51,7 +52,7 @@ object DriversManager {
       desc = driver._2._2.newInstance()
       ctrl <- compileDriverWithObservables(name, desc, "").toOption
       schemas = desc.tasks.map(cls => TaskSchemaFactory.createSchema(runtimeMirror(cl).classSymbol(cls).toType))
-    } yield DeviceDriver(ctrl.configurator, ctrl, schemas)).headOption
+    } yield DeviceDriver(ctrl.configurator, ctrl, schemas, drivers(name)._1)).headOption
   }
 
   private def detectAvailableDrivers() : Map[String, (DriverMetadata, Class[Driver])] = {
@@ -151,9 +152,9 @@ object TestServices extends App  {
       s1.tasks.foreach(t => println(t))
   }
 
-  DevicesManager.obsBus.subscribe(println(_))
+  //DevicesManager.obsBus.subscribe(println(_))
 
 
-  println(DevicesManager.sensors)
+  //println(DevicesManager.sensors)
 
 }

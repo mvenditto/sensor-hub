@@ -29,6 +29,6 @@ object ServiceLoader {
 }
 
 object TestServicess extends App {
-  //println(DriversManager.availableDrivers)
+  println(DriversManager.availableDrivers)
   //ServiceLoader.services.head._2.newInstance().init(DevicesManager.obsBus)
 }

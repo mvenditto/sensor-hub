@@ -11,11 +11,13 @@ import scala.collection.JavaConverters._
 import scala.reflect.internal.util.ScalaClassLoader
 import scala.util.Try
 
-object ServiceLoader {
+object ServicesManager {
 
   var servicesDir = "../ext/services/"
   val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
   private[this] val logger: Logger = LoggerFactory.getLogger("services-loader")
+
+  private[this] var _registeredServices = Seq.empty[ServiceMetadata]
 
   new File(servicesDir)
     .listFiles()
@@ -29,10 +31,15 @@ object ServiceLoader {
   val services: Map[String, Class[_ <: Service]] =
     serviceFinder.mapAllImplementations(classOf[Service]).asScala.toMap
 
+  def registeredServices: Seq[ServiceMetadata] = _registeredServices
+
   def runAllServices(): Unit = services.foreach(service => {
     logger.info(s"loading service: ${service._1}")
-    Try(service._2.newInstance().init(ServiceMetadata(service._1, "", "", Paths.get(servicesDir, service._1).toString)))
-      .fold(err => logger.error(s"error loading ${service._1}: ${err.getMessage}"), _ => ())
+    val meta = ServiceMetadata(service._1, "", "", Paths.get(servicesDir, service._1).toString)
+    Try(service._2.newInstance().init(meta))
+      .fold(
+        err => logger.error(s"error loading ${service._1}: ${err.getMessage}"),
+        _ => _registeredServices :+= meta)
   })
 
 }

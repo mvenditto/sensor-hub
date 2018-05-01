@@ -1,25 +1,33 @@
-package driver_api
+package api.internal
 
-import driver_api.internal.DriverManager
-import fi.oph.myscalaschema.SchemaValidatingExtractor.extractFrom
-import fi.oph.myscalaschema.{ExtractionContext, Schema, SchemaFactory}
+import api.tasks.TaskSchema
+import api.tasks.oph.TaskSchemaFactory
+import fi.oph.myscalaschema.{ExtractionContext, SchemaFactory}
 import io.reactivex.Maybe
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods.parseOpt
 
 import scala.collection.immutable.ListMap
+import scala.reflect.runtime.universe._
 
-trait MessageSupport {
+trait TaskingSupport {
 
-  protected val schemas: ListMap[String, Schema] = ListMap.empty[String, Schema]
+  protected val commandClasses: List[Class[_]] = List.empty[Class[_]]
+  private lazy val schemas = ListMap(commandClasses.map(cls => (cls.getName, schemaFromClass(cls))):_*)
   protected val answer: PartialFunction[Any, Either[Option[String], Throwable]]
 
   private[this] implicit val context = ExtractionContext(SchemaFactory.default)
 
+  private def schemaFromClass(cls: Class[_]): TaskSchema =
+    //SchemaFactory.default.createSchema(runtimeMirror(getClass.getClassLoader).classSymbol(cls).toType)
+    TaskSchemaFactory.createSchema(runtimeMirror(getClass.getClassLoader).classSymbol(cls).toType)
+
+
   private def optExtractFromSchemas(json: JValue): Option[Any] = {
     for (schemaEntry <- schemas) {
       val(clsName, schema) = schemaEntry
-      val result = extractFrom(json, Class.forName(clsName, true, DriverManager.cl), schema).toOption
+      val result = schema.extract(json)
+      //extractFrom(json, Class.forName(clsName, true, DriversManager.cl), schema).toOption
       if (result.isDefined) return result
     }
     None

@@ -17,6 +17,6 @@ libraryDependencies ++= Seq(
   "io.reactivex.rxjava2" % "rxjava" % "2.1.10",
   "com.github.pureconfig" %% "pureconfig" % "0.9.0",
   "org.scalamacros" % "paradise_2.12.4" % "2.1.1",
-  "org.log4s" %% "log4s" % "1.6.0"
-
+  "org.log4s" %% "log4s" % "1.6.0",
+  "org.apache.xbean" % "xbean-finder" % "4.7"
 )

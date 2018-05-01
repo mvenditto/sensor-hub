@@ -2,7 +2,7 @@ package spi.service
 
 trait Service extends Disposable {
 
-  def init(): Unit
+  def init(metadata: ServiceMetadata): Unit
 
   def restart(): Unit
 

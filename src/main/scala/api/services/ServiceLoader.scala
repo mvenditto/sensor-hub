@@ -27,8 +27,3 @@ object ServiceLoader {
     serviceFinder.mapAllImplementations(classOf[Service]).asScala.toMap
 
 }
-
-object TestServicess extends App {
-  println(DriversManager.availableDrivers)
-  //ServiceLoader.services.head._2.newInstance().init(DevicesManager.obsBus)
-}

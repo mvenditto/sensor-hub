@@ -138,7 +138,7 @@ object TestServices extends App  {
       drv.controller.init()
       drv.controller.start()
       println("sensor1")
-      val s1 = DevicesManager.createSensor("test temp sensor", "", Encodings.PDF, new URI(""), drv)
+      val s1 = DevicesManager.createDevice("test temp sensor", "", Encodings.PDF, new URI(""), drv)
   }
 
   val d2 = DriversManager.instanceDriver("driver 1")
@@ -148,7 +148,7 @@ object TestServices extends App  {
       drv.controller.init()
       drv.controller.start()
       println("sensor2")
-      val s1 = DevicesManager.createSensor("test temp sensor2", "", Encodings.PDF, new URI(""), drv)
+      val s1 = DevicesManager.createDevice("test temp sensor2", "", Encodings.PDF, new URI(""), drv)
       s1.tasks.foreach(t => println(t))
   }
 

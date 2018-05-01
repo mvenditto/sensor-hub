@@ -17,9 +17,10 @@ object ServiceLoader {
 
   new File(driversDir)
     .listFiles()
-    .filter(_.getName.endsWith(".jar"))
-    .map(_.toURI.toURL)
-    .foreach(cl.addURL)
+    .filter(_.isDirectory)
+    .map(dir => (dir.getName, dir.listFiles().find(_.getName.endsWith(".jar"))))
+    .foreach(s => s._2.foreach(
+      j => if (j.getName.split('.').head == s._1) cl.addURL(j.toURI.toURL)))
 
   private val serviceFinder = new ResourceFinder("META-INF/", cl)
 

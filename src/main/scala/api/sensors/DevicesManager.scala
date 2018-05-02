@@ -4,12 +4,14 @@ import java.net.URI
 import java.util.concurrent.atomic.AtomicInteger
 
 import api.devices.Devices.Device
+import api.events.EventSource
+import api.events.SensorsHubEvents.DeviceCreated
 import api.internal.DeviceDriverWrapper
 import api.sensors.Sensors.{Encoding, Observation}
 import rx.lang.scala.subjects.PublishSubject
 import rx.lang.scala.{Observable, Subscription}
 
-object DevicesManager {
+object DevicesManager extends EventSource {
 
   private val idFactory = new AtomicInteger(0)
   private def newId(): Int = idFactory.getAndIncrement()
@@ -36,6 +38,7 @@ object DevicesManager {
     val sensor = Device(newId(), name, description, encodingType, metadata, driver)
     _devices = _devices ++ Map(sensor.id -> sensor)
     _obsBusSubscriptions = _obsBusSubscriptions ++ Map(sensor.id -> subscribeToObsBus(sensor))
+    trigger(DeviceCreated(sensor))
     sensor
   }
 

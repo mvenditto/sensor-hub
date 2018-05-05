@@ -36,10 +36,11 @@ object ServicesManager {
   def runAllServices(): Unit = services.foreach(service => {
     logger.info(s"loading service: ${service._1}")
     val meta = ServiceMetadata(service._1, "", "", Paths.get(servicesDir, service._1).toString)
-    Try(service._2.newInstance().init(meta))
+    new Thread(() => Try(service._2.newInstance().init(meta))
       .fold(
         err => logger.error(s"error loading ${service._1}: ${err.getMessage}"),
         _ => _registeredServices :+= meta)
+    ).start()
   })
 
 }

@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import api.devices.Devices.Device
 import api.events.EventSource
-import api.events.SensorsHubEvents.DeviceCreated
+import api.events.SensorsHubEvents.{DeviceCreated, DeviceDeleted}
 import api.internal.DeviceDriverWrapper
 import api.sensors.Sensors.{Encoding, Observation}
 import rx.lang.scala.subjects.PublishSubject
@@ -27,9 +27,12 @@ object DevicesManager extends EventSource {
   def getDevice(id: Int): Option[Device] = _devices.get(id)
 
   def deleteDevice(id: Int): Unit = {
-    _devices = _devices.filter(_._1 != id)
-    _obsBusSubscriptions.get(id).foreach(_.foreach(_.unsubscribe))
-    _obsBusSubscriptions = _obsBusSubscriptions.filter(_._1 != id)
+    _devices.find(_._1 == id).foreach(dev => {
+      _devices = _devices.filter(_._1 != id)
+      _obsBusSubscriptions.get(id).foreach(_.foreach(_.unsubscribe))
+      _obsBusSubscriptions = _obsBusSubscriptions.filter(_._1 != id)
+      trigger(DeviceDeleted(dev._2))
+    })
   }
 
   def createDevice(

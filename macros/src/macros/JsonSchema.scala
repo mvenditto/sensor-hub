@@ -1,8 +1,5 @@
 package macros
 
-
-import api.internal.Msg
-
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox

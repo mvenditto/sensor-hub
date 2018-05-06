@@ -21,8 +21,6 @@ class ScalaSchemaAdapter private[oph] (schema: Schema, className: String = "") e
 
 object TaskSchemaFactory extends AbstractTaskSchemaFactory {
 
-  ObjectExtractor.overrideClassLoader(DriversManager.cl)
-
   override def createSchema[T](tpe: universe.Type): TaskSchema =
     new ScalaSchemaAdapter(
       SchemaFactory.default.createSchema(tpe),

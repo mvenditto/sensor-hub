@@ -12,8 +12,17 @@ import scala.reflect.runtime.universe._
 
 trait TaskingSupport {
 
+  private[this] implicit val fmts = org.json4s.DefaultFormats
+
   protected val commandClasses: List[Class[_]] = List.empty[Class[_]]
-  private lazy val schemas = ListMap(commandClasses.map(cls => (cls.getName, schemaFromClass(cls))):_*)
+
+  private lazy val schemas = ListMap(commandClasses.map(cls => {
+      val s = schemaFromClass(cls)
+      val name = (s.toJson \\ "title").extract[String].replace(' ', '-')
+      println(name, s)
+      name -> s
+    }):_*)
+
   protected val answer: PartialFunction[Any, Either[Option[String], Throwable]]
 
   private[this] implicit val context = ExtractionContext(SchemaFactory.default)
@@ -33,16 +42,19 @@ trait TaskingSupport {
     None
   }
 
-  def send(msg: String): Maybe[String] = {
+  def send(task: String, msg: String): Maybe[String] = {
+
     val response = for {
-      result <- parseOpt(msg)
-      msg <- optExtractFromSchemas(result).map(answer)
-    } yield msg
+      msg_ <- parseOpt(msg)
+      schema <- schemas.get(task)
+      result <- schema.extract(msg_).map(answer)
+    } yield result
 
     val res = response match {
       case Some(x) if x.isLeft && x.left.get.isDefined => x
       case Some(x) if x.isRight => x
-      case _ => Left(None)
+      case _ => Right(new IllegalArgumentException(
+        s"unrecognized task or wrong message format: $task <- $msg"))
     }
 
     Maybe.create[String](e => {

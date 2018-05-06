@@ -1,4 +1,4 @@
-package api.internal
+package macros
 
 import scala.annotation.StaticAnnotation
 

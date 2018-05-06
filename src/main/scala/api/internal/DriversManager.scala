@@ -40,7 +40,7 @@ object DriversManager {
   private var driverPackages = Seq.empty[String]
   private val drivers: Map[String, (DriverMetadata, Class[Driver])] = detectAvailableDrivers()
 
-  @GrantWith(classOf[DriverManagementPermission], "drivers.list")
+  //@GrantWith(classOf[DriverManagementPermission], "drivers.list")
   def availableDrivers: Iterable[DriverMetadata] = {
     drivers.map(_._2._1)
   }

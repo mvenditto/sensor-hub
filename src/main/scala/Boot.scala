@@ -1,9 +1,11 @@
+
 import api.internal.DriversManager
 import api.services.ServicesManager
 import fi.oph.myscalaschema.extraction.ObjectExtractor
-
 object Boot extends App {
+
   ObjectExtractor.overrideClassLoader(DriversManager.cl)
+
   val tag =
     """
        ::: version 0.0.2 :::                          :::           :::
@@ -17,6 +19,7 @@ object Boot extends App {
   //org.apache.log4j.BasicConfigurator.configure()
   System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog")
   System.setProperty("org.eclipse.jetty.LEVEL", "OFF")
+
 
   ServicesManager.runAllServices()
 

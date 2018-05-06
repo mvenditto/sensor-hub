@@ -10,12 +10,14 @@ import spi.service.{Service, ServiceMetadata}
 import scala.collection.JavaConverters._
 import scala.reflect.internal.util.ScalaClassLoader
 import scala.util.Try
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object ServicesManager {
 
   var servicesDir = "../ext/services/"
   val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
-  private[this] val logger: Logger = LoggerFactory.getLogger("services-loader")
+  private[this] val logger: Logger = LoggerFactory.getLogger("sh.services-loader")
 
   private[this] var _registeredServices = Seq.empty[ServiceMetadata]
 
@@ -33,14 +35,16 @@ object ServicesManager {
 
   def registeredServices: Seq[ServiceMetadata] = _registeredServices
 
-  def runAllServices(): Unit = services.foreach(service => {
-    logger.info(s"loading service: ${service._1}")
-    val meta = ServiceMetadata(service._1, "", "", Paths.get(servicesDir, service._1).toString)
-    new Thread(() => Try(service._2.newInstance().init(meta))
-      .fold(
-        err => logger.error(s"error loading ${service._1}: ${err.getMessage}"),
-        _ => _registeredServices :+= meta)
-    ).start()
-  })
+  def runAllServices(): Future[List[Unit]] = Future.sequence(services.map(service => {
+        logger.info(s"loading service: ${service._1}")
+        val meta = ServiceMetadata(service._1, "", "", Paths.get(servicesDir, service._1).toString)
+        Future {
+          Try(service._2.newInstance().init(meta))
+            .fold(
+              err => logger.error(s"error loading ${service._1}: ${err.getMessage}"),
+              _ => _registeredServices :+= meta)
+        }
+      }
+  ).toList)
 
 }

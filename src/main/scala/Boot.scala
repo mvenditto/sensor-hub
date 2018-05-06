@@ -2,6 +2,11 @@
 import api.internal.DriversManager
 import api.services.ServicesManager
 import fi.oph.myscalaschema.extraction.ObjectExtractor
+import org.apache.log4j.{Level, LogManager}
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 object Boot extends App {
 
   ObjectExtractor.overrideClassLoader(DriversManager.cl)
@@ -21,7 +26,13 @@ object Boot extends App {
   System.setProperty("org.eclipse.jetty.LEVEL", "OFF")
 
 
-  ServicesManager.runAllServices()
+  Await.ready(ServicesManager.runAllServices(), 5 seconds)
+
+  import scala.collection.JavaConverters._
+  LogManager.getCurrentLoggers.asScala foreach {
+    case l: org.apache.log4j.Logger =>
+      if(!l.getName.startsWith("sh.")) l.setLevel(Level.OFF)
+  }
 
   println(tag)
 

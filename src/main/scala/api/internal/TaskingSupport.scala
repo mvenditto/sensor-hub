@@ -28,7 +28,6 @@ trait TaskingSupport {
   private[this] implicit val context = ExtractionContext(SchemaFactory.default)
 
   private def schemaFromClass(cls: Class[_]): TaskSchema =
-    //SchemaFactory.default.createSchema(runtimeMirror(getClass.getClassLoader).classSymbol(cls).toType)
     TaskSchemaFactory.createSchema(runtimeMirror(getClass.getClassLoader).classSymbol(cls).toType)
 
 
@@ -36,14 +35,12 @@ trait TaskingSupport {
     for (schemaEntry <- schemas) {
       val(clsName, schema) = schemaEntry
       val result = schema.extract(json)
-      //extractFrom(json, Class.forName(clsName, true, DriversManager.cl), schema).toOption
       if (result.isDefined) return result
     }
     None
   }
 
   def send(task: String, msg: String): Maybe[String] = {
-
     val response = for {
       msg_ <- parseOpt(msg)
       schema <- schemas.get(task)

@@ -35,7 +35,7 @@ object DriversManager {
     .foreach(cl.addURL)
 
   private val finder = new ResourceFinder("META-INF/", cl)
-  private[this] implicit val logger: Logger = LoggerFactory.getLogger("drivers-manager")
+  private[this] implicit val logger: Logger = LoggerFactory.getLogger("sh.drivers-manager")
 
   private var driverPackages = Seq.empty[String]
   private val drivers: Map[String, (DriverMetadata, Class[Driver])] = detectAvailableDrivers()

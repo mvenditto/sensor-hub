@@ -12,7 +12,7 @@ object Boot extends App {
   ObjectExtractor.overrideClassLoader(DriversManager.cl)
 
   val tag =
-    s"""
+    """
        ::: version 0.1.0 :::                          :::           :::
         __   ___  _ __   ___   ___   _ __  ___        | |__   _   _ | |__
       / __| / _ \| '_ \ / __| / _ \ |  __|/ __| _____ |  _ \ | | | ||  _ \

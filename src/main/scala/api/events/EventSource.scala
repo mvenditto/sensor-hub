@@ -10,6 +10,6 @@ trait EventSource {
 
   val events: Observable[SensorsHubEvent] = eventBus.asInstanceOf[Observable[SensorsHubEvent]]
 
-  protected def trigger(e: SensorsHubEvent): Unit = eventBus.onNext(e)
+  def trigger(e: SensorsHubEvent): Unit = eventBus.onNext(e)
 
 }

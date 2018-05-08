@@ -1,4 +1,5 @@
 
+import api.events.EventBus
 import api.internal.DriversManager
 import api.services.ServicesManager
 import fi.oph.myscalaschema.extraction.ObjectExtractor
@@ -8,6 +9,8 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object Boot extends App {
+
+  EventBus.events.subscribe(e => println(e))
 
   ObjectExtractor.overrideClassLoader(DriversManager.cl)
 
@@ -27,6 +30,7 @@ object Boot extends App {
 
 
   Await.ready(ServicesManager.runAllServices(), 5 seconds)
+
 
   import scala.collection.JavaConverters._
   LogManager.getCurrentLoggers.asScala foreach {

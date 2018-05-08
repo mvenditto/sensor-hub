@@ -3,6 +3,7 @@ package api.internal
 import java.io.File
 import java.net.URI
 
+import api.events.EventBus
 import api.sensors.DevicesManager
 import api.internal.MetadataFactory._
 import api.internal.MetadataValidation._
@@ -21,6 +22,7 @@ import scala.reflect.internal.util.ScalaClassLoader
 import scala.util.Try
 import scala.reflect.runtime.universe._
 import utils.SecurityUtils.securityManager
+import api.events.SensorsHubEvents._
 
 object DriversManager {
   org.apache.log4j.BasicConfigurator.configure() // dirty log4j conf for debug purpose TODO
@@ -61,7 +63,8 @@ object DriversManager {
 
     def checkNameConflict(name: String): Boolean = {
       if (names.contains(name)) {
-        logger.warn(s"skipping $name: name conflicting.")
+        EventBus.trigger(DriverNameConflictWarn(name))
+        //logger.warn(s"skipping $name: name conflicting.")
         false
       } else {
         names :+= name
@@ -71,7 +74,9 @@ object DriversManager {
 
     val availableDrivers = for {
       props <- finder.mapAllProperties(classOf[Driver].getName).asScala
-      metadata <- logEitherOpt(validate(create(props._2)))
+      metaCheck = validate(create(props._2))
+      _ = metaCheck.fold(err => EventBus.trigger(DriverInvalidMetadataError(err)), _ => ())
+      metadata <- metaCheck.toOption
       if checkNameConflict(metadata.name)
       cls <- tryDriverRegistration(metadata).toOption
     } yield metadata -> cls.asInstanceOf[Class[Driver]]
@@ -83,18 +88,22 @@ object DriversManager {
   private def tryDriverRegistration(metadata: DriverMetadata): Try[Class[_]] = {
     val tryRegistration = Try {
       if(driverPackages.contains(metadata.descriptorClassName)) {
-        logger.error(s"skipping ${metadata.name}: package clash for: ${metadata.descriptorClassName} (already loaded)")
-        throw new IllegalStateException()
+        //logger.error(s"skipping ${metadata.name}: package clash for: ${metadata.descriptorClassName} (already loaded)")
+        throw new IllegalStateException(s"skipping ${metadata.name}: package clash for: ${metadata.descriptorClassName} (already loaded)")
       } else {
         driverPackages :+= metadata.descriptorClassName
         cl.loadClass(metadata.descriptorClassName)
       }
     }
 
-    logTry(tryRegistration)(
+    tryRegistration fold(
+      err => EventBus.trigger(DriverLoadingError(err, metadata)),
+      cls => EventBus.trigger(DriverLoaded(cls, metadata)))
+
+    /*logTry(tryRegistration)(
       err => s"""driver loading error ${metadata.name}: ${err.getMessage}""",
       cls => s"""loaded driver descriptor: ${metadata.name} :$cls"""
-    )
+    )*/
 
     tryRegistration
   }
@@ -104,7 +113,7 @@ object DriversManager {
       Seq(desc.controllerClass, desc.configurationClass) foreach {
         cls =>
           if (driverPackages.contains(cls.getName) && !drivers.keys.toSeq.contains(name)) {
-            logger.error(s"class name clash: $cls")
+            //logger.error(s"class name clash: $cls")
             throw new IllegalStateException(s"conflict detected! class $cls already present.")
           } else {
             driverPackages :+= cls.getName
@@ -116,10 +125,16 @@ object DriversManager {
       desc.controllerClass.getConstructors.head.newInstance(Seq(cfg):_*).asInstanceOf[DeviceController]
     }
 
+    val meta = drivers(name)._1
+    tryCompile fold(
+        err => EventBus.trigger(DriverInstantiationError(err, meta)),
+        ctrl => EventBus.trigger(DriverInstanced(ctrl, meta)))
+
+    /*
     logTry(tryCompile)(
       err => s"instantiation error: ${err.getMessage}",
       _ => s"instantiated driver for: ${desc.controllerClass}:${desc.configurationClass}"
-    )
+    )*/
     tryCompile
   }
 }

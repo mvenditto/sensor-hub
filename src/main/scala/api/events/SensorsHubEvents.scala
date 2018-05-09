@@ -1,34 +1,40 @@
 package api.events
 
+import java.time.Instant
+
 import api.devices.Devices.Device
+import api.internal.DriverMetadata
 import api.internal.MetadataValidation.ValidationError
-import api.internal.{DeviceController, DriverMetadata}
 import spi.service.ServiceMetadata
 
 object SensorsHubEvents {
 
-  sealed trait SensorsHubEvent
+  sealed trait SensorsHubEvent { val timestamp: Instant = Instant.now() }
 
-  case class DeviceCreated(ds: Device) extends SensorsHubEvent
+  class Error extends SensorsHubEvent
+  class Warn extends SensorsHubEvent
+  class Info extends SensorsHubEvent
 
-  case class DeviceDeleted(ds: Device) extends SensorsHubEvent
+  case class DeviceCreated(ds: Device) extends Info
 
-  case class DriverNameConflictWarn(name: String) extends SensorsHubEvent
+  case class DeviceDeleted(ds: Device) extends Info
 
-  case class DriverNameClashError(metadata: DriverMetadata) extends SensorsHubEvent
+  case class DriverNameConflictWarn(name: String) extends Warn
 
-  case class DriverLoaded(clazz: Class[_], metadata: DriverMetadata) extends SensorsHubEvent
+  case class DriverNameClashError(metadata: DriverMetadata) extends Error
 
-  case class DriverLoadingError(t: Throwable, metadata: DriverMetadata) extends SensorsHubEvent
+  case class DriverLoaded(metadata: DriverMetadata) extends Info
 
-  case class DriverInvalidMetadataError(err: ValidationError) extends SensorsHubEvent
+  case class DriverLoadingError(t: Throwable, metadata: DriverMetadata) extends Error
 
-  case class DriverInstanced(ctrl: DeviceController, metadata: DriverMetadata) extends SensorsHubEvent
+  case class DriverInvalidMetadataError(err: ValidationError) extends Error
 
-  case class DriverInstantiationError(t: Throwable, metadata: DriverMetadata) extends SensorsHubEvent
+  case class DriverInstanced(metadata: DriverMetadata) extends Info
 
-  case class ServiceLoaded(metadata: ServiceMetadata) extends SensorsHubEvent
+  case class DriverInstantiationError(t: Throwable, metadata: DriverMetadata) extends Error
 
-  case class ServiceLoadingError(t: Throwable, metadata: ServiceMetadata) extends SensorsHubEvent
+  case class ServiceLoaded(metadata: ServiceMetadata) extends Info
+
+  case class ServiceLoadingError(t: Throwable, metadata: ServiceMetadata) extends Error
 
 }

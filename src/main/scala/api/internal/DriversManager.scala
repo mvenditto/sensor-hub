@@ -1,28 +1,20 @@
 package api.internal
 
 import java.io.File
-import java.net.URI
 
 import api.events.EventBus
-import api.sensors.DevicesManager
+import api.events.SensorsHubEvents._
 import api.internal.MetadataFactory._
 import api.internal.MetadataValidation._
-import api.sensors.Sensors.Encodings
-import api.services.security.permission.DriverManagementPermission
 import api.tasks.oph.TaskSchemaFactory
-import spi.drivers.Driver
-import fi.oph.myscalaschema.extraction.ObjectExtractor
-import macros.permission.GrantWith
 import org.apache.xbean.finder.ResourceFinder
 import org.slf4j.{Logger, LoggerFactory}
-import utils.LoggingUtils.{logEitherOpt, logTry}
+import spi.drivers.Driver
 
 import scala.collection.JavaConverters._
 import scala.reflect.internal.util.ScalaClassLoader
-import scala.util.Try
 import scala.reflect.runtime.universe._
-import utils.SecurityUtils.securityManager
-import api.events.SensorsHubEvents._
+import scala.util.Try
 
 object DriversManager {
   org.apache.log4j.BasicConfigurator.configure() // dirty log4j conf for debug purpose TODO
@@ -64,7 +56,6 @@ object DriversManager {
     def checkNameConflict(name: String): Boolean = {
       if (names.contains(name)) {
         EventBus.trigger(DriverNameConflictWarn(name))
-        //logger.warn(s"skipping $name: name conflicting.")
         false
       } else {
         names :+= name
@@ -88,7 +79,6 @@ object DriversManager {
   private def tryDriverRegistration(metadata: DriverMetadata): Try[Class[_]] = {
     val tryRegistration = Try {
       if(driverPackages.contains(metadata.descriptorClassName)) {
-        //logger.error(s"skipping ${metadata.name}: package clash for: ${metadata.descriptorClassName} (already loaded)")
         throw new IllegalStateException(s"skipping ${metadata.name}: package clash for: ${metadata.descriptorClassName} (already loaded)")
       } else {
         driverPackages :+= metadata.descriptorClassName
@@ -98,12 +88,7 @@ object DriversManager {
 
     tryRegistration fold(
       err => EventBus.trigger(DriverLoadingError(err, metadata)),
-      cls => EventBus.trigger(DriverLoaded(cls, metadata)))
-
-    /*logTry(tryRegistration)(
-      err => s"""driver loading error ${metadata.name}: ${err.getMessage}""",
-      cls => s"""loaded driver descriptor: ${metadata.name} :$cls"""
-    )*/
+      _ => EventBus.trigger(DriverLoaded(metadata)))
 
     tryRegistration
   }
@@ -128,7 +113,7 @@ object DriversManager {
     val meta = drivers(name)._1
     tryCompile fold(
         err => EventBus.trigger(DriverInstantiationError(err, meta)),
-        ctrl => EventBus.trigger(DriverInstanced(ctrl, meta)))
+        ctrl => EventBus.trigger(DriverInstanced(meta)))
 
     /*
     logTry(tryCompile)(
@@ -137,39 +122,4 @@ object DriversManager {
     )*/
     tryCompile
   }
-}
-
-object TestServices extends App  {
-  ObjectExtractor.overrideClassLoader(DriversManager.cl)
-
-  val d1 = DriversManager.instanceDriver("driver 1")
-
-  println(DriversManager.availableDrivers)
-
-  import org.json4s.jackson.JsonMethods._
-
-  d1.foreach {
-    drv =>
-      drv.controller.init()
-      drv.controller.start()
-      println("sensor1")
-      val s1 = DevicesManager.createDevice("test temp sensor", "", Encodings.PDF, new URI(""), drv)
-  }
-
-  val d2 = DriversManager.instanceDriver("driver 1")
-
-  d2.foreach {
-    drv =>
-      drv.controller.init()
-      drv.controller.start()
-      println("sensor2")
-      val s1 = DevicesManager.createDevice("test temp sensor2", "", Encodings.PDF, new URI(""), drv)
-      s1.tasks.foreach(t => println(t))
-  }
-
-  //DevicesManager.obsBus.subscribe(println(_))
-
-
-  //println(DevicesManager.sensors)
-
 }

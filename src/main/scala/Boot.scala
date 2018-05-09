@@ -1,5 +1,5 @@
 
-import api.events.EventBus
+import api.events.EventLogging
 import api.internal.DriversManager
 import api.services.ServicesManager
 import fi.oph.myscalaschema.extraction.ObjectExtractor
@@ -10,7 +10,7 @@ import scala.concurrent.duration._
 
 object Boot extends App {
 
-  EventBus.events.subscribe(e => println(e))
+  EventLogging.init()
 
   ObjectExtractor.overrideClassLoader(DriversManager.cl)
 
@@ -25,12 +25,11 @@ object Boot extends App {
     """
 
   //org.apache.log4j.BasicConfigurator.configure()
+
   System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog")
   System.setProperty("org.eclipse.jetty.LEVEL", "OFF")
 
-
   Await.ready(ServicesManager.runAllServices(), 5 seconds)
-
 
   import scala.collection.JavaConverters._
   LogManager.getCurrentLoggers.asScala foreach {

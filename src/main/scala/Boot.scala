@@ -13,8 +13,6 @@ object Boot extends App {
 
   if (Preferences.cfg.logEvents) EventLogging.init()
 
-  println(Preferences.cfg)
-
   ObjectExtractor.overrideClassLoader(DriversManager.cl)
 
   val tag =

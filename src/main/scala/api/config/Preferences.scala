@@ -14,6 +14,7 @@ object Preferences extends Configurator {
   )
 
   configure("sh-prefs.conf")
+  println(_cfg)
 
   private var _cfg: ShConfig = _
 
@@ -21,12 +22,8 @@ object Preferences extends Configurator {
 
   override def configure(cfgPath: String): Unit = {
     _cfg = loadConfigFromFiles[ShConfig](Seq(cfgPath).map(new File(_).toPath)) match {
-      case Right(config) =>
-        println(config)
-        config
-      case Left(e) =>
-        println("error", e)
-        ShConfig()
+      case Right(config) => config
+      case Left(e) => ShConfig()
     }
   }
 }

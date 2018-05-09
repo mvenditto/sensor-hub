@@ -2,6 +2,7 @@ package api.internal
 
 import java.io.File
 
+import api.config.Preferences
 import api.events.EventBus
 import api.events.SensorsHubEvents._
 import api.internal.MetadataFactory._
@@ -19,7 +20,7 @@ import scala.util.Try
 object DriversManager {
   org.apache.log4j.BasicConfigurator.configure() // dirty log4j conf for debug purpose TODO
 
-  var driversDir = "../ext/drivers/"
+  private[this] val driversDir = Preferences.cfg.driversDir
   val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
 
   new File(driversDir)

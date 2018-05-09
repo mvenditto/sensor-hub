@@ -3,6 +3,7 @@ package api.services
 import java.io.File
 import java.nio.file.Paths
 
+import api.config.Preferences
 import api.events.EventBus
 import api.events.SensorsHubEvents.{ServiceLoaded, ServiceLoadingError}
 import org.apache.xbean.finder.ResourceFinder
@@ -16,7 +17,7 @@ import scala.concurrent.Future
 
 object ServicesManager {
 
-  var servicesDir = "../ext/services/"
+  private[this] val servicesDir = Preferences.cfg.servicesDir
   val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
 
   private[this] var _registeredServices = Seq.empty[ServiceMetadata]

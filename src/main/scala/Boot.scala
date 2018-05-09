@@ -1,4 +1,5 @@
 
+import api.config.Preferences
 import api.events.EventLogging
 import api.internal.DriversManager
 import api.services.ServicesManager
@@ -10,7 +11,9 @@ import scala.concurrent.duration._
 
 object Boot extends App {
 
-  EventLogging.init()
+  if (Preferences.cfg.logEvents) EventLogging.init()
+
+  println(Preferences.cfg)
 
   ObjectExtractor.overrideClassLoader(DriversManager.cl)
 

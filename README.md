@@ -1,7 +1,7 @@
 # sensor-hub :whale:
 
 ## TODOs List
-- [ ] global *configuration* management
+- [x] global *configuration* management
 - [ ] enhance services bootstrap phase (threads?, load order?, service hearthbeat?) 
 - [ ] rethink *feature of interest* attachment to *observations* (move out from drivers level)
 - [ ] add more checks on argument while creating resources (eg. createDevice ecc...)

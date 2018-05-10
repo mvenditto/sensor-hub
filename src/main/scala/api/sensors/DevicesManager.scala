@@ -12,7 +12,6 @@ import rx.lang.scala.subjects.PublishSubject
 import rx.lang.scala.{Observable, Subscription}
 
 
-
 object DevicesManager{
 
   private val idFactory = new AtomicInteger(0)

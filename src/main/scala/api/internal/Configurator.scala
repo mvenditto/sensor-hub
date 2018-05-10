@@ -8,4 +8,6 @@ trait Configurator {
 
   def configure(cfgPath: String): Unit
 
+  def configureRaw(cfg: String): Unit
+
 }

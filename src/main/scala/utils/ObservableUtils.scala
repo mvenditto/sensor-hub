@@ -14,6 +14,6 @@ object ObservableUtils {
           sub.onCompleted()
         }).start()
       }
-    }
+    }.onBackpressureLatest
   }
 }

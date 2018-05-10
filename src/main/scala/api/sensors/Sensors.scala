@@ -64,16 +64,16 @@ object Sensors {
     unitOfMeasurement: UnitOfMeasurement,
     observationType: ObservationType,
     observedProperty: ObservedProperty,
-    procedure: () => Observation,
+    procedure: (DataStream) => Observation,
     sensor: Device = null,
     observedArea: Option[Any] = None,
     phenomenonTime: Option[Long] = None,
     resultTime: Option[Long] = None
   ) {
 
-    val doObservation: () => Observation = () =>  procedure().copy(parentDataStream = this)
+    val doObservation: () => Observation = () =>  procedure(this)
 
-    val observable: Observable[Observation] =
+    lazy val observable: Observable[Observation] =
       ObservableUtils.observableFromFunc(doObservation)
   }
 

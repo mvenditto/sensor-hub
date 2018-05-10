@@ -1,7 +1,5 @@
 package api.events
 
-import java.time.Instant
-
 import api.devices.Devices.Device
 import api.internal.DriverMetadata
 import api.internal.MetadataValidation.ValidationError
@@ -9,7 +7,7 @@ import spi.service.ServiceMetadata
 
 object SensorsHubEvents {
 
-  sealed trait SensorsHubEvent { val timestamp: Instant = Instant.now() }
+  sealed trait SensorsHubEvent { val timestamp: Long = System.currentTimeMillis() }
 
   class Error extends SensorsHubEvent
   class Warn extends SensorsHubEvent

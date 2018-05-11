@@ -1,6 +1,6 @@
 # sensor-hub :whale:
 
-## TODOs List
+## TODOs List :ballot_box_with_check:
 - [x] global *configuration* management
 - [ ] enhance services bootstrap phase (threads?, load order?, service hearthbeat?) 
 - [ ] rethink *feature of interest* attachment to *observations* (move out from drivers level)

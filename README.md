@@ -9,7 +9,7 @@
 - [ ] permissions implementation
 - [x] refactor logging/auditing
 
-### Optimizations
+### Optimizations :fire:
 - [x] fix Observation instanced 2 times (cause .copy call in DataStream)
 - [x] change timestamps from java.time.instant to Long (millis since epoch)
 - [ ] fix performance issues with infinite Observable created from observation procedure

@@ -4,8 +4,9 @@ import java.net.URI
 import java.time.Period
 
 import api.devices.Devices.Device
+import api.internal.Observations
+import io.reactivex.{Flowable, Observable}
 import org.json4s.JsonAST.JValue
-import rx.lang.scala.Observable
 import utils.ObservableUtils
 
 object Sensors {
@@ -73,8 +74,8 @@ object Sensors {
 
     val doObservation: () => Observation = () =>  procedure(this)
 
-    lazy val observable: Observable[Observation] =
-      ObservableUtils.observableFromFunc(doObservation)
+    lazy val observable: Flowable[Observation] =
+      Observations.atSampleRate(doObservation, 1000)
   }
 
   case class ObservedProperty(

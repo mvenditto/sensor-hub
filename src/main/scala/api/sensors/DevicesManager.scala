@@ -8,8 +8,9 @@ import api.events.EventBus
 import api.events.SensorsHubEvents.{DeviceCreated, DeviceDeleted}
 import api.internal.DeviceDriverWrapper
 import api.sensors.Sensors.{Encoding, Observation}
-import rx.lang.scala.subjects.PublishSubject
-import rx.lang.scala.{Observable, Subscription}
+import io.reactivex.Observable
+import io.reactivex.disposables.Disposable
+import io.reactivex.subjects.PublishSubject
 
 
 object DevicesManager{
@@ -18,8 +19,8 @@ object DevicesManager{
   private def newId(): Int = idFactory.getAndIncrement()
 
   private var _devices = Map.empty[Int, Device]
-  private var _obsBusSubscriptions = Map.empty[Int, Seq[Subscription]]
-  private val _obsBus = PublishSubject[Observation]()
+  private var _obsBusSubscriptions = Map.empty[Int, Seq[Disposable]]
+  private val _obsBus = PublishSubject.create[Observation]()
 
   def obsBus: Observable[Observation] = _obsBus.asInstanceOf[Observable[Observation]]
 
@@ -30,7 +31,7 @@ object DevicesManager{
   def deleteDevice(id: Int): Unit = {
     _devices.find(_._1 == id).foreach(dev => {
       _devices = _devices.filter(_._1 != id)
-      _obsBusSubscriptions.get(id).foreach(_.foreach(_.unsubscribe))
+      _obsBusSubscriptions.get(id).foreach(_.foreach(_.dispose()))
       _obsBusSubscriptions = _obsBusSubscriptions.filter(_._1 != id)
       EventBus.trigger(DeviceDeleted(dev._2))
     })
@@ -46,7 +47,7 @@ object DevicesManager{
     sensor
   }
 
-  private def subscribeToObsBus(sensor: Device): Seq[Subscription] = {
+  private def subscribeToObsBus(sensor: Device): Seq[Disposable] = {
     sensor.dataStreams.map(ds => ds.observable.subscribe(obs => _obsBus.onNext(obs))).toSeq
   }
 

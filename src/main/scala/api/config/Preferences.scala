@@ -26,4 +26,6 @@ object Preferences extends Configurator {
       case Left(e) => ShConfig()
     }
   }
+
+  override def configureRaw(cfg: String): Unit = { }
 }

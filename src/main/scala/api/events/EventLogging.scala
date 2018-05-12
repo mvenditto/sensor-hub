@@ -1,6 +1,7 @@
 package api.events
 
 import api.events.SensorsHubEvents._
+import io.reactivex.schedulers.Schedulers
 import org.slf4j.LoggerFactory
 
 object EventLogging {
@@ -8,7 +9,9 @@ object EventLogging {
   private[this] val logger = LoggerFactory.getLogger("sh.event-bus")
 
   def init(): Unit = {
-    EventBus.events.subscribe(evt => evt match {
+    EventBus.events
+      .subscribeOn(Schedulers.io())
+      .subscribe(evt => evt match {
 
       case DeviceCreated(metadata) =>
         logger.info(s"[${evt.timestamp}] device created: ${metadata.name}[${metadata.id}]")

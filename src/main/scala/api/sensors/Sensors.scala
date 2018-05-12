@@ -1,12 +1,12 @@
 package api.sensors
 
 import java.net.URI
-import java.time.{Instant, Period}
+import java.time.Period
 
 import api.devices.Devices.Device
-import api.internal.DeviceDriverWrapper
+import api.internal.Observations
+import io.reactivex.{Flowable, Observable}
 import org.json4s.JsonAST.JValue
-import rx.lang.scala.Observable
 import utils.ObservableUtils
 
 object Sensors {
@@ -50,7 +50,7 @@ object Sensors {
   )
 
   case class HistoricalLocation(
-    time: Instant
+    time: Long
   )
 
   case class UnitOfMeasurement(
@@ -65,17 +65,17 @@ object Sensors {
     unitOfMeasurement: UnitOfMeasurement,
     observationType: ObservationType,
     observedProperty: ObservedProperty,
-    procedure: () => Observation,
+    procedure: (DataStream) => Observation,
     sensor: Device = null,
     observedArea: Option[Any] = None,
-    phenomenonTime: Option[Instant] = None,
-    resultTime: Option[Instant] = None
+    phenomenonTime: Option[Long] = None,
+    resultTime: Option[Long] = None
   ) {
 
-    val doObservation: () => Observation = () =>  procedure().copy(parentDataStream = this)
+    val doObservation: () => Observation = () =>  procedure(this)
 
-    val observable: Observable[Observation] =
-      ObservableUtils.observableFromFunc(doObservation)
+    lazy val observable: Flowable[Observation] =
+      Observations.atSampleRate(doObservation, 1000)
   }
 
   case class ObservedProperty(
@@ -85,8 +85,8 @@ object Sensors {
   )
 
   case class Observation(
-    phenomenonTime: Instant,
-    resultTime: Instant,
+    phenomenonTime: Long,
+    resultTime: Long,
     result: Any,
     featureOfInterest: FeatureOfInterest,
     parentDataStream: DataStream,

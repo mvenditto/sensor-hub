@@ -1,12 +1,13 @@
 package api.events
 
 import api.events.SensorsHubEvents.SensorsHubEvent
-import rx.lang.scala.Observable
-import rx.lang.scala.subjects.PublishSubject
+import io.reactivex.Observable
+import io.reactivex.subjects.PublishSubject
+
 
 trait EventSource {
 
-  protected val eventBus = PublishSubject[SensorsHubEvent]()
+  protected val eventBus = PublishSubject.create[SensorsHubEvent]()
 
   val events: Observable[SensorsHubEvent] = eventBus.asInstanceOf[Observable[SensorsHubEvent]]
 

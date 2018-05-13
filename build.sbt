@@ -27,3 +27,5 @@ libraryDependencies ++= Seq(
 )
 
 fork in Test := true
+
+coverageExcludedPackages := "api\\.events.*;api\\.config.*;api\\.events.*;api\\.spi.*"

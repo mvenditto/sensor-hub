@@ -114,12 +114,7 @@ object DriversManager {
     tryCompile fold(
         err => EventBus.trigger(DriverInstantiationError(err, meta)),
         ctrl => EventBus.trigger(DriverInstanced(meta)))
-
-    /*
-    logTry(tryCompile)(
-      err => s"instantiation error: ${err.getMessage}",
-      _ => s"instantiated driver for: ${desc.controllerClass}:${desc.configurationClass}"
-    )*/
+    
     tryCompile
   }
 }

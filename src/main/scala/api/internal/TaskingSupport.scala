@@ -4,7 +4,6 @@ import api.tasks.TaskSchema
 import api.tasks.oph.TaskSchemaFactory
 import fi.oph.myscalaschema.{ExtractionContext, SchemaFactory}
 import io.reactivex.Maybe
-import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods.parseOpt
 
 import scala.collection.immutable.ListMap
@@ -30,16 +29,6 @@ trait TaskingSupport {
   private def schemaFromClass(cls: Class[_]): TaskSchema =
     TaskSchemaFactory.createSchema(runtimeMirror(getClass.getClassLoader).classSymbol(cls).toType)
 
-
-  private def optExtractFromSchemas(json: JValue): Option[Any] = {
-    for (schemaEntry <- schemas) {
-      val(clsName, schema) = schemaEntry
-      val result = schema.extract(json)
-      if (result.isDefined) return result
-    }
-    None
-  }
-
   def send(task: String, msg: String): Maybe[String] = {
     val response = for {
       msg_ <- parseOpt(msg)
@@ -48,8 +37,7 @@ trait TaskingSupport {
     } yield result
 
     val res = response match {
-      case Some(x) if x.isLeft && x.left.get.isDefined => x
-      case Some(x) if x.isRight => x
+      case Some(x) => x
       case _ => Right(new IllegalArgumentException(
         s"unrecognized task or wrong message format: $task <- $msg"))
     }
@@ -57,8 +45,8 @@ trait TaskingSupport {
     Maybe.create[String](e => {
       res match {
         case Right(reason) => e.onError(reason)
-        case Left(result) if result.isDefined => e.onSuccess(result.get)
-        case Left(result) if result.isEmpty => e.onComplete()
+        case Left(Some(x)) => e.onSuccess(x)
+        case Left(None) => e.onComplete()
       }
     })
   }

@@ -2,11 +2,6 @@ package api.internal
 
 import java.util.Properties
 
-case class DriverTag(
-  metadata: DriverMetadata,
-  id: String
-)
-
 case class DriverMetadata(
   name: String,
   version: String,

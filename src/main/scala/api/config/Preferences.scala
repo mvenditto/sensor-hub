@@ -13,9 +13,6 @@ object Preferences extends Configurator {
     logEvents: Boolean = true
   )
 
-  configure("sh-prefs.conf")
-  println(_cfg)
-
   private var _cfg: ShConfig = _
 
   lazy val cfg: ShConfig = _cfg

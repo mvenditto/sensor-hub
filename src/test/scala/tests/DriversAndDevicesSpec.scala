@@ -20,7 +20,7 @@ class DriversAndDevicesSpec extends FlatSpec with SensorsHubInit {
   }
 
   it should "instance a valid driver among the available ones" in {
-    //assert(DriversManager.instanceDriver("driver 1").isDefined)
+    assert(DriversManager.instanceDriver("driver 1").isDefined)
   }
 
   "the DevicesManager" should "create a Device provided a valid driver" in {
@@ -48,7 +48,7 @@ class DriversAndDevicesSpec extends FlatSpec with SensorsHubInit {
   }
 
   it should "be configured providing also by a .conf file" in {
-    val cfg = "conf.conf"
+    val cfg = "src/test/assets/conf.conf"
     assert(DriversManager.instanceDriver("driver 1")
       .map(drv => {
         drv.config.configure(cfg)
@@ -83,7 +83,13 @@ class DriversAndDevicesSpec extends FlatSpec with SensorsHubInit {
     }
   }
 
-  "a Device" should "support 0 to many tasks that return a result" in {
+  "a Device" should "expose 0 to many supported tasks schemas" in {
+    DevicesManager.getDevice(1).foreach(dev => {
+      assert(dev.tasks.size == 4)
+    })
+  }
+
+   it should "support 0 to many tasks that return a result" in {
     DevicesManager.getDevice(1).foreach(dev => {
       dev.driver.controller match {
         case ctrl: DeviceController with TaskingSupport =>
@@ -144,9 +150,7 @@ class DriversAndDevicesSpec extends FlatSpec with SensorsHubInit {
 
   it should "load init and start all available services" in {
     Await.ready(ServicesManager.runAllServices(), 5 seconds)
+    assert(ServicesManager.registeredServices.nonEmpty)
     true
   }
-
-
-
 }

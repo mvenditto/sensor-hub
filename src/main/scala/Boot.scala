@@ -1,5 +1,6 @@
 
 import api.config.Preferences
+import api.config.Preferences.configure
 import api.events.EventLogging
 import api.internal.DriversManager
 import api.services.ServicesManager
@@ -10,6 +11,8 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object Boot extends App {
+
+  configure("sh-prefs.conf")
 
   if (Preferences.cfg.logEvents) EventLogging.init()
 

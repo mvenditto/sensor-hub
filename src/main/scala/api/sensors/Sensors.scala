@@ -5,9 +5,8 @@ import java.time.Period
 
 import api.devices.Devices.Device
 import api.internal.Observations
-import io.reactivex.{Flowable, Observable}
+import io.reactivex.Flowable
 import org.json4s.JsonAST.JValue
-import utils.ObservableUtils
 
 object Sensors {
 

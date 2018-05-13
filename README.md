@@ -15,3 +15,7 @@
 - [x] fix performance issues with infinite Observable created from observation procedure
 - [x] add a default backpressure strategyy to Observation streams from sensors
 - [ ] investigate other possible issues with memory/cpu usage (rx threading ecc...)
+
+# Coverage
+
+[![codecov](https://codecov.io/gh/mvenditto/sensor-hub/branch/master/graphs/icicle.svg?token=Nj3INWZgrw)](https://codecov.io/gh/mvenditto/sensor-hub/branch/master/graphs/icicle.svg?token=Nj3INWZgrw)

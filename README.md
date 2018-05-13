@@ -1,4 +1,4 @@
-# sensor-hub :whale:
+# sensor-hub [![codecov](https://codecov.io/gh/mvenditto/sensor-hub/branch/master/graph/badge.svg?token=Nj3INWZgrw)](https://codecov.io/gh/mvenditto/sensor-hub)
 
 ## TODOs List :ballot_box_with_check:
 - [x] global *configuration* management

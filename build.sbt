@@ -2,7 +2,8 @@ name := "sensors-hub"
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("releases"),
-  Resolver.sonatypeRepo("snapshots")
+  Resolver.sonatypeRepo("snapshots"),
+  Resolver.url("scoverage-bintray", url("https://dl.bintray.com/sksamuel/sbt-plugins/"))(Resolver.ivyStylePatterns)
 )
 
 version := "1.0"
@@ -18,5 +19,11 @@ libraryDependencies ++= Seq(
   "com.github.pureconfig" %% "pureconfig" % "0.9.0",
   "org.scalamacros" % "paradise_2.12.4" % "2.1.1",
   "org.log4s" %% "log4s" % "1.6.0",
-  "org.apache.xbean" % "xbean-finder" % "4.7"
+  "org.apache.xbean" % "xbean-finder" % "4.7",
+  "org.scalactic" %% "scalactic" % "3.0.5",
+  "org.scalatest" %% "scalatest" % "3.0.5" % "test",
+  "org.scoverage" % "scalac-scoverage-plugin_2.12" % "1.3.1",
+  "org.scoverage" % "scalac-scoverage-runtime_2.12" % "1.3.1"
 )
+
+fork in Test := true

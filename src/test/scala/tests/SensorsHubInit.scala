@@ -8,6 +8,4 @@ trait SensorsHubInit {
   ObjectExtractor.overrideClassLoader(DriversManager.cl)
 
   println("sh init ok...")
-
-  Thread.sleep(5000)
 }

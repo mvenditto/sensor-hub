@@ -45,7 +45,7 @@ object DriversManager {
       driver <- drivers
       if driver._1 == name
       desc = driver._2._2.newInstance()
-      ctrl <- compileDriverWithObservables(name, desc, "").toOption
+      ctrl <- compileDriverWithObservables(name, desc).toOption
       schemas = desc.tasks.map(cls => TaskSchemaFactory.createSchema(runtimeMirror(cl).classSymbol(cls).toType))
     } yield DeviceDriver(ctrl.configurator, ctrl, schemas, drivers(name)._1)).headOption
   }
@@ -94,7 +94,7 @@ object DriversManager {
     tryRegistration
   }
 
-  private def compileDriverWithObservables(name: String, desc: Driver, nativeLibsPath: String): Try[DeviceController] = {
+  private def compileDriverWithObservables(name: String, desc: Driver): Try[DeviceController] = {
     val tryCompile = Try {
       Seq(desc.controllerClass, desc.configurationClass) foreach {
         cls =>
@@ -107,7 +107,6 @@ object DriversManager {
       }
 
       val cfg = desc.configurationClass.newInstance()
-      cfg.setJniLibPath(nativeLibsPath)
       desc.controllerClass.getConstructors.head.newInstance(Seq(cfg):_*).asInstanceOf[DeviceController]
     }
 

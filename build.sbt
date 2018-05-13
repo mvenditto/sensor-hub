@@ -20,10 +20,10 @@ libraryDependencies ++= Seq(
   "org.scalamacros" % "paradise_2.12.4" % "2.1.1",
   "org.log4s" %% "log4s" % "1.6.0",
   "org.apache.xbean" % "xbean-finder" % "4.7",
-  "org.scalactic" %% "scalactic" % "3.0.5",
+  "org.scalactic" %% "scalactic" % "3.0.5" % "test",
   "org.scalatest" %% "scalatest" % "3.0.5" % "test",
-  "org.scoverage" % "scalac-scoverage-plugin_2.12" % "1.3.1",
-  "org.scoverage" % "scalac-scoverage-runtime_2.12" % "1.3.1"
+  "org.scoverage" % "scalac-scoverage-plugin_2.12" % "1.3.1" % "test",
+  "org.scoverage" % "scalac-scoverage-runtime_2.12" % "1.3.1" % "test"
 )
 
 fork in Test := true

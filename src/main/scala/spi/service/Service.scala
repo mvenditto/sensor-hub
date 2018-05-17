@@ -8,4 +8,6 @@ trait Service extends Disposable {
 
   def restart(): Unit
 
+  def stop(): Unit
+
 }

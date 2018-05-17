@@ -6,11 +6,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import api.devices.Devices.Device
 import api.events.EventBus
 import api.events.SensorsHubEvents.{DeviceCreated, DeviceDeleted}
-import api.internal.DeviceDriverWrapper
+import api.internal.{DeviceDriverWrapper, DisposableManager}
 import api.sensors.Sensors.{DataStream, Encoding, Observation}
 import io.reactivex.Observable
 import io.reactivex.disposables.Disposable
 import io.reactivex.subjects.PublishSubject
+
+import scala.collection.concurrent.TrieMap
 
 
 object DevicesManager{
@@ -18,8 +20,8 @@ object DevicesManager{
   private val idFactory = new AtomicInteger(0)
   private def newId(): Int = idFactory.getAndIncrement()
 
-  private var _devices = Map.empty[Int, Device]
-  private var _obsBusSubscriptions = Map.empty[Int, Seq[Disposable]]
+  private var _devices = TrieMap.empty[Int, Device]
+  private var _obsBusSubscriptions = TrieMap.empty[Int, Seq[Disposable]]
   private val _obsBus = PublishSubject.create[Observation]()
 
   def obsBus: Observable[Observation] = _obsBus.asInstanceOf[Observable[Observation]]
@@ -41,8 +43,9 @@ object DevicesManager{
     name: String, description: String,
     encodingType: Encoding, metadata: URI, driver: DeviceDriverWrapper, dsMap: (DataStream) => DataStream = ds => ds): Device = {
     val sensor = Device(newId(), name, description, encodingType, metadata, driver, dsMap)
-    _devices = _devices ++ Map(sensor.id -> sensor)
-    _obsBusSubscriptions = _obsBusSubscriptions ++ Map(sensor.id -> subscribeToObsBus(sensor))
+    val disposables = DisposableManager.addAll(subscribeToObsBus(sensor))
+    _devices.put(sensor.id, sensor)
+    _obsBusSubscriptions.put(sensor.id, disposables)
     EventBus.trigger(DeviceCreated(sensor))
     sensor
   }

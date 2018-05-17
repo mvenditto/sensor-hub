@@ -16,6 +16,13 @@ object Sensors {
     val PDF = Encoding("application/pdf")
     val SensorML = Encoding("http://www.opengis.net/doc/IS/SensorML/2.0")
     val GEOJson = Encoding("application/vnd.geo+json")
+
+    def fromName(name: String): Encoding = name match {
+      case "application/pdf" => PDF
+      case "http://www.opengis.net/doc/IS/SensorML/2.0" => SensorML
+      case "application/vnd.geo+json" => GEOJson
+    }
+
   }
 
   case class ObservationType(name: String)

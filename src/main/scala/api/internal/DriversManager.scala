@@ -23,11 +23,12 @@ object DriversManager {
   private[this] val driversDir = Preferences.cfg.driversDir
   val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
 
-  new File(driversDir)
-    .listFiles()
-    .filter(_.getName.endsWith(".jar"))
-    .map(_.toURI.toURL)
-    .foreach(cl.addURL)
+  Option(new File(driversDir)).fold(logger.error(s"drivers directory ($driversDir) does not exists!")) {
+      _.listFiles()
+      .filter(_.getName.endsWith(".jar"))
+      .map(_.toURI.toURL)
+      .foreach(cl.addURL)
+  }
 
   private val finder = new ResourceFinder("META-INF/", cl)
   private[this] implicit val logger: Logger = LoggerFactory.getLogger("sh.drivers-manager")

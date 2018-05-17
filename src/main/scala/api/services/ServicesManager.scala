@@ -42,8 +42,9 @@ object ServicesManager {
       val serviceInstance = service._2.newInstance()
       Future {
         Try {
+          Thread.currentThread().setContextClassLoader(cl)
           serviceInstance.init(meta)
-          new Thread(() => serviceInstance.start()).start()
+          serviceInstance.start()
           serviceInstance
         }.fold(
           err => EventBus.trigger(ServiceLoadingError(err, meta)),

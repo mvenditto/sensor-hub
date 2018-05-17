@@ -62,6 +62,7 @@ object Sensors {
     name: String,
     description: String,
     unitOfMeasurement: UnitOfMeasurement,
+    featureOfInterest: FeatureOfInterest,
     observationType: ObservationType,
     observedProperty: ObservedProperty,
     procedure: (DataStream) => Observation,
@@ -87,7 +88,6 @@ object Sensors {
     phenomenonTime: Long,
     resultTime: Long,
     result: Any,
-    featureOfInterest: FeatureOfInterest,
     parentDataStream: DataStream,
     validTime: Option[Period] = None,
     parameters: Option[JValue] = None

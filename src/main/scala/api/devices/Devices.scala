@@ -19,10 +19,11 @@ object Devices {
   case class Device private (
     id: Int, name: String, description: String,
     encodingType: Encoding, metadata: URI,
-    driver: DeviceDriverWrapper
+    driver: DeviceDriverWrapper,
+    dataStreamMapper:(DataStream) => DataStream = ds => ds
   ) {
     val dataStreams: Iterable[DataStream] =
-      driver.controller.dataStreams.map( _.copy(sensor = this))
+      driver.controller.dataStreams.map(ds => dataStreamMapper(ds.copy(sensor = this)))
     val tasks: Iterable[TaskingCapability] =
       driver.tasks
         .map(_.toJson)

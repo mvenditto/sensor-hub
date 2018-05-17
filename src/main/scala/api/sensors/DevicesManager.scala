@@ -7,7 +7,7 @@ import api.devices.Devices.Device
 import api.events.EventBus
 import api.events.SensorsHubEvents.{DeviceCreated, DeviceDeleted}
 import api.internal.DeviceDriverWrapper
-import api.sensors.Sensors.{Encoding, Observation}
+import api.sensors.Sensors.{DataStream, Encoding, Observation}
 import io.reactivex.Observable
 import io.reactivex.disposables.Disposable
 import io.reactivex.subjects.PublishSubject
@@ -39,8 +39,8 @@ object DevicesManager{
 
   def createDevice(
     name: String, description: String,
-    encodingType: Encoding, metadata: URI, driver: DeviceDriverWrapper): Device = {
-    val sensor = Device(newId(), name, description, encodingType, metadata, driver)
+    encodingType: Encoding, metadata: URI, driver: DeviceDriverWrapper, dsMap: (DataStream) => DataStream = ds => ds): Device = {
+    val sensor = Device(newId(), name, description, encodingType, metadata, driver, dsMap)
     _devices = _devices ++ Map(sensor.id -> sensor)
     _obsBusSubscriptions = _obsBusSubscriptions ++ Map(sensor.id -> subscribeToObsBus(sensor))
     EventBus.trigger(DeviceCreated(sensor))

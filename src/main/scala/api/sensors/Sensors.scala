@@ -38,6 +38,14 @@ object Sensors {
       ObservationType("http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Observation")
     val OM_TruthObservation =
       ObservationType("http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_TruthObservation")
+
+    def fromName(name: String): ObservationType = name match {
+      case "OM_CategoryObservation" => OM_CategoryObservation
+      case "OM_CountObservation" => OM_CountObservation
+      case "OM_Measurement" => OM_Measurement
+      case "OM_Observation" => OM_Observation
+      case "OM_TruthObservation" => OM_TruthObservation
+    }
   }
 
   case class Thing(

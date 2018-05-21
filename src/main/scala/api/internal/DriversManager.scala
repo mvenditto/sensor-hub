@@ -41,6 +41,11 @@ object DriversManager {
     drivers.map(_._2._1)
   }
 
+  val safeBoot: (DeviceDriver) => Try[Unit] = (drv: DeviceDriver) => Try {
+    drv.controller.init()
+    drv.controller.start()
+  }
+
   def instanceDriver(name: String): Option[DeviceDriverWrapper] = {
     (for {
       driver <- drivers
@@ -96,6 +101,7 @@ object DriversManager {
   }
 
   private def compileDriverWithObservables(name: String, desc: Driver): Try[DeviceController] = {
+    val meta = drivers(name)._1
     val tryCompile = Try {
       Seq(desc.controllerClass, desc.configurationClass) foreach {
         cls =>
@@ -107,11 +113,10 @@ object DriversManager {
           }
       }
 
-      val cfg = desc.configurationClass.newInstance()
+      val cfg = desc.configurationClass.getConstructors.head.newInstance(Seq(meta):_*).asInstanceOf[DeviceConfigurator]
       desc.controllerClass.getConstructors.head.newInstance(Seq(cfg):_*).asInstanceOf[DeviceController]
     }
 
-    val meta = drivers(name)._1
     tryCompile fold(
         err => EventBus.trigger(DriverInstantiationError(err, meta)),
         ctrl => EventBus.trigger(DriverInstanced(meta)))

@@ -29,7 +29,7 @@ object EventLogging {
         logger.error(s"[${evt.timestamp}] invalid metadata: ${err.msg}")
 
       case DriverInstanced(metadata) =>
-        logger.info(s"[${evt.timestamp}] instanced driver: ${metadata.name}")
+        logger.info(s"[${evt.timestamp}] instanced driver: ${metadata.name}[${metadata.rootDir}]")
 
       case DriverInstantiationError(err, metadata) =>
         logger.error(s"[${evt.timestamp}] error instancing driver ${metadata.name}, cause: ${err.getMessage}")

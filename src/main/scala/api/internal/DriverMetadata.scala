@@ -1,13 +1,18 @@
 package api.internal
 
+import java.nio.file.Paths
 import java.util.Properties
+
+import api.config.Preferences
 
 case class DriverMetadata(
   name: String,
   version: String,
   description: String,
   descriptorClassName: String
-)
+) {
+  val rootDir: String = Paths.get(Preferences.cfg.driversDir, name+".json").toString
+}
 
 object MetadataValidation {
 
@@ -44,5 +49,4 @@ object MetadataFactory {
         p.getProperty(ClassName, Unknown)
       )
   }
-
 }

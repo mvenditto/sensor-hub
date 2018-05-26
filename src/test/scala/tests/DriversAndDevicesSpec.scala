@@ -20,11 +20,11 @@ class DriversAndDevicesSpec extends FlatSpec with SensorsHubInit {
   }
 
   it should "instance a valid driver among the available ones" in {
-    assert(DriversManager.instanceDriver("driver 1").isDefined)
+    assert(DriversManager.instanceDriver("dummy-therm-driver").isDefined)
   }
 
   "the DevicesManager" should "create a Device provided a valid driver" in {
-    assert(DriversManager.instanceDriver("driver 1")
+    assert(DriversManager.instanceDriver("dummy-therm-driver")
       .map(drv => {
         drv.controller.init()
         drv.controller.start()
@@ -38,7 +38,7 @@ class DriversAndDevicesSpec extends FlatSpec with SensorsHubInit {
                 	"0.20" = "30.0"
                 	"0.05" = "50.0"
                 }"""
-    assert(DriversManager.instanceDriver("driver 1")
+    assert(DriversManager.instanceDriver("dummy-therm-driver")
       .map(drv => {
         drv.config.configureRaw(cfg)
         drv.controller.init()
@@ -49,7 +49,7 @@ class DriversAndDevicesSpec extends FlatSpec with SensorsHubInit {
 
   it should "be configured providing also by a .conf file" in {
     val cfg = "src/test/assets/conf.conf"
-    assert(DriversManager.instanceDriver("driver 1")
+    assert(DriversManager.instanceDriver("dummy-therm-driver")
       .map(drv => {
         drv.config.configure(cfg)
         drv.controller.init()

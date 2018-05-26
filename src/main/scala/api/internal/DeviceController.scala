@@ -28,9 +28,6 @@ trait JsonManifest extends Manifest {
     val src = Source.fromFile(new File(manifestPath)).mkString
     val json = parse(src)
 
-    println(dc.configurator.metadata)
-    println(pretty(json))
-
     for {
       JObject(child) <- json \ "datastreams"
       JField("name", JString(name)) <- child
@@ -55,7 +52,6 @@ trait DeviceController extends JsonManifest {
 
   lazy val _dataStreams =
     dataStreamsFromManifest(this, configurator.metadata.rootDir)
-  //Seq.empty[DataStream]
 
   def dataStreams: Iterable[DataStream] = _dataStreams
 

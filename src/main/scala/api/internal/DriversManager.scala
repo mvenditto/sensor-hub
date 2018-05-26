@@ -34,7 +34,7 @@ object DriversManager {
   private[this] implicit val logger: Logger = LoggerFactory.getLogger("sh.drivers-manager")
 
   private var driverPackages = Seq.empty[String]
-  private val drivers: Map[String, (DriverMetadata, Class[Driver])] = detectAvailableDrivers()
+  private var drivers: Map[String, (DriverMetadata, Class[Driver])] = detectAvailableDrivers()
 
   //@GrantWith(classOf[DriverManagementPermission], "drivers.list")
   def availableDrivers: Iterable[DriverMetadata] = {
@@ -119,7 +119,7 @@ object DriversManager {
 
     tryCompile fold(
         err => EventBus.trigger(DriverInstantiationError(err, meta)),
-        ctrl => EventBus.trigger(DriverInstanced(meta)))
+        _ => EventBus.trigger(DriverInstanced(meta)))
     
     tryCompile
   }

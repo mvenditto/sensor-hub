@@ -2,6 +2,7 @@ package api.sensors
 
 import java.net.URI
 import java.time.Period
+import java.util.concurrent.TimeUnit
 
 import api.devices.Devices.Device
 import api.internal.Observations
@@ -73,6 +74,18 @@ object Sensors {
     definition: URI
   )
 
+  case class DataStreamCustomProps(
+    name: Option[String],
+    description: Option[String],
+    featureOfInterest: Option[FeatureOfInterest])
+
+  case class DataStreamMetadata(
+    description: String,
+    unitOfMeasurement: UnitOfMeasurement,
+    featureOfInterest: FeatureOfInterest,
+    observationType: ObservationType,
+    observedProperty: ObservedProperty)
+
   case class DataStream(
     name: String,
     description: String,
@@ -88,6 +101,11 @@ object Sensors {
   ) {
 
     val doObservation: () => Observation = () =>  procedure(this)
+
+    def newObservableSampled(sampleRate: Long, initDelay: Long = 0,
+      unit: TimeUnit = TimeUnit.MILLISECONDS): Flowable[Observation] = {
+      Observations.atSampleRate(doObservation, sampleRate, initDelay, unit)
+    }
 
     lazy val observable: Flowable[Observation] =
       Observations.atSampleRate(doObservation, 1000)

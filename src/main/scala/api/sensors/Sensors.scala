@@ -2,6 +2,7 @@ package api.sensors
 
 import java.net.URI
 import java.time.Period
+import java.util.concurrent.TimeUnit
 
 import api.devices.Devices.Device
 import api.internal.Observations
@@ -38,6 +39,14 @@ object Sensors {
       ObservationType("http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Observation")
     val OM_TruthObservation =
       ObservationType("http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_TruthObservation")
+
+    def fromName(name: String): ObservationType = name match {
+      case "OM_CategoryObservation" => OM_CategoryObservation
+      case "OM_CountObservation" => OM_CountObservation
+      case "OM_Measurement" => OM_Measurement
+      case "OM_Observation" => OM_Observation
+      case "OM_TruthObservation" => OM_TruthObservation
+    }
   }
 
   case class Thing(
@@ -65,6 +74,18 @@ object Sensors {
     definition: URI
   )
 
+  case class DataStreamCustomProps(
+    name: Option[String],
+    description: Option[String],
+    featureOfInterest: Option[FeatureOfInterest])
+
+  case class DataStreamMetadata(
+    description: String,
+    unitOfMeasurement: UnitOfMeasurement,
+    featureOfInterest: FeatureOfInterest,
+    observationType: ObservationType,
+    observedProperty: ObservedProperty)
+
   case class DataStream(
     name: String,
     description: String,
@@ -80,6 +101,11 @@ object Sensors {
   ) {
 
     val doObservation: () => Observation = () =>  procedure(this)
+
+    def newObservableSampled(sampleRate: Long, initDelay: Long = 0,
+      unit: TimeUnit = TimeUnit.MILLISECONDS): Flowable[Observation] = {
+      Observations.atSampleRate(doObservation, sampleRate, initDelay, unit)
+    }
 
     lazy val observable: Flowable[Observation] =
       Observations.atSampleRate(doObservation, 1000)

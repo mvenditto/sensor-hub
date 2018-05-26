@@ -26,6 +26,7 @@ object CustomSeriDeseri {
       new DeviceMetadataSerializer(),
       new URISerializer(),
       new ObservedPropertySerializer(),
+      new FeatureOfInterestSerializer(),
       new DataStreamSerializer(),
       new UnitOfMeasurementSerializer())
 
@@ -60,11 +61,28 @@ object CustomSeriDeseri {
     }
   ))
 
+  class FeatureOfInterestSerializer extends CustomSerializer[FeatureOfInterest](_ => ( {
+    case json: JObject =>
+      FeatureOfInterest(
+        (json \ "name").extract[String],
+        (json \ "description").extract[String],
+        Encodings.fromName((json \ "encoding").extract[String]),
+        json \ "feature")
+  }, {
+    case fov: FeatureOfInterest =>
+      JObject(
+          JField("name", JString(fov.name)) ::
+          JField("description", JString(fov.description)) ::
+          JField("encoding", JString(fov.encodingType.name)) ::
+          JField("feature", Extraction.decompose(fov.feature)) :: Nil)
+  }
+  ))
+
   class ObservedPropertySerializer extends CustomSerializer[ObservedProperty](_ => ( {
     case json: JObject =>
       ObservedProperty(
         (json \ "name").extract[String],
-        (json \ "definition").extract[URI],
+        new URI((json \ "definition").extract[String]),
         (json \ "description").extract[String])
   }, {
     case op: ObservedProperty =>
@@ -80,7 +98,7 @@ object CustomSeriDeseri {
       UnitOfMeasurement(
         (json \ "name").extract[String],
         (json \ "symbol").extract[String],
-        (json \ "definition").extract[URI])
+        new URI((json \ "definition").extract[String]))
   }, {
     case op: UnitOfMeasurement =>
       JObject(

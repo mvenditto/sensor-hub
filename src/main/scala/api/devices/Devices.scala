@@ -4,7 +4,7 @@ import java.net.URI
 
 import api.tasks.Tasks.TaskingCapability
 import api.internal.DeviceDriverWrapper
-import api.sensors.Sensors.{DataStream, Encoding}
+import api.sensors.Sensors.{DataStream, DataStreamCustomProps, Encoding}
 import org.json4s.JsonDSL._
 
 
@@ -20,10 +20,21 @@ object Devices {
     id: Int, name: String, description: String,
     encodingType: Encoding, metadata: URI,
     driver: DeviceDriverWrapper,
-    dataStreamMapper:(DataStream) => DataStream = ds => ds
+    customProps: Map[String, DataStreamCustomProps] = Map.empty
   ) {
     val dataStreams: Iterable[DataStream] =
-      driver.controller.dataStreams.map(ds => dataStreamMapper(ds.copy(sensor = this)))
+      driver.controller.dataStreams.map(ds => {
+        var updatedDs = ds.copy(sensor = this)
+        customProps.get(ds.name).foreach(cp => {
+          updatedDs = updatedDs.copy(
+            name = cp.name.getOrElse(updatedDs.name),
+            description = cp.description.getOrElse(updatedDs.description),
+            featureOfInterest = cp.featureOfInterest.getOrElse(updatedDs.featureOfInterest),
+          )
+        })
+        updatedDs
+      })
+
     val tasks: Iterable[TaskingCapability] =
       driver.tasks
         .map(_.toJson)

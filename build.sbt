@@ -27,6 +27,10 @@ libraryDependencies ++= Seq(
   "org.scoverage" % "scalac-scoverage-runtime_2.12" % "1.3.1" % "test"
 )
 
+coverageEnabled in(Test, compile) := true
+
+coverageEnabled in(Compile, compile) := false
+
 fork in Test := true
 
 coverageExcludedPackages := "Boot;api\\.events.*;api\\.config.*;api\\.events.*;api\\.spi.*"

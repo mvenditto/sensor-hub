@@ -6,7 +6,7 @@ import api.config.Preferences
 import api.config.Preferences.configure
 import api.devices.Devices.Device
 import api.events.EventLogging
-import api.internal.{DisposableManager, DriversManager}
+import api.internal.{DeviceConfigurator, DisposableManager, DriversManager, PersistedConfig}
 import api.sensors.DevicesManager
 import api.sensors.Sensors.Encodings
 import api.services.ServicesManager
@@ -90,6 +90,10 @@ class BootDaemon extends Daemon {
     logger.info(s"attempt to restore device: $dev")
     DriversManager.instanceDriver(dev.driverName).map {
       drv =>
+        if (dev.cfg.nonEmpty) {
+          if (dev.cfg.startsWith("raw:")) drv.config.configureRaw(dev.cfg.split("raw:").tail.mkString)
+          else drv.config.configure(dev.cfg)
+        }
         drv.controller.init()
         drv.controller.start()
         DevicesManager.createDevice(dev.name, dev.description,
@@ -99,17 +103,25 @@ class BootDaemon extends Daemon {
 
   def snapshotSystem(): Try[Unit] = Try {
 
-    val devices = write(DevicesManager.devices().map {
-      dev => JObject(
+    val devices = write(DevicesManager.devices().map(dev => {
+
+      val cfg = dev.driver.config match {
+        case c: DeviceConfigurator with PersistedConfig =>
+          c.getConfig.map(_.fold(s => s, r => "raw:"+r))
+        case _ => None
+      }
+
+      JObject(
             JField("id", JInt(dev.id)) ::
             JField("name", JString(dev.name)) ::
             JField("description", JString(dev.description)) ::
             JField("metadataEncoding", JString(dev.encodingType.name)) ::
             JField("metadata", JString(dev.metadata.toString)) ::
-            JField("driverName", JString(dev.driver.metadata.name))
-            :: Nil)
+            JField("driverName", JString(dev.driver.metadata.name)) ::
+            JField("cfg", JString(cfg.getOrElse("")))
+              :: Nil)
       }
-    )
+    ))
 
     val snapshot = new File(".snapshot")
     if (snapshot.exists()) snapshot.delete()

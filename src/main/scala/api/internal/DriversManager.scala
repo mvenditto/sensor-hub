@@ -16,12 +16,14 @@ import scala.collection.JavaConverters._
 import scala.reflect.internal.util.ScalaClassLoader
 import scala.reflect.runtime.universe._
 import scala.util.Try
+import scala.tools.reflect._
 
 object DriversManager {
   org.apache.log4j.BasicConfigurator.configure() // dirty log4j conf for debug purpose TODO
 
   private[this] val driversDir = Preferences.cfg.driversDir
   val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
+  private[this] val tb = runtimeMirror(cl).mkToolBox()
 
   Option(new File(driversDir)).fold(logger.error(s"drivers directory ($driversDir) does not exists!")) {
       _.listFiles()
@@ -113,8 +115,20 @@ object DriversManager {
           }
       }
 
-      val cfg = desc.configurationClass.getConstructors.head.newInstance(Seq(meta):_*).asInstanceOf[DeviceConfigurator]
-      desc.controllerClass.getConstructors.head.newInstance(Seq(cfg):_*).asInstanceOf[DeviceController]
+      //temp fix to don't brake retro compatibility with drivers
+      val code =
+        s"""
+           | import api.internal.PersistedConfig
+           | import api.internal.{DriversManager => dm}
+           | val meta = dm.availableDrivers.filter(_.name equals "$name").headOption.get
+           | val cfg = new ${desc.configurationClass.getName}(meta) with PersistedConfig
+           | new ${desc.controllerClass.getName}(cfg)
+         """.stripMargin
+
+      (tb eval (tb parse code)).asInstanceOf[DeviceController]
+
+      //val cfg = desc.configurationClass.getConstructors.head.newInstance(Seq(meta):_*).asInstanceOf[DeviceConfigurator]
+      //desc.controllerClass.getConstructors.head.newInstance(Seq(cfg):_*).asInstanceOf[DeviceController]
     }
 
     tryCompile fold(

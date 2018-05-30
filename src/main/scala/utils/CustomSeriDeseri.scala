@@ -19,7 +19,8 @@ object CustomSeriDeseri {
     description: String,
     metadataEncoding: String,
     metadata: String,
-    driverName: String
+    driverName: String,
+    cfg: String
   )
 
   implicit val fmt = org.json4s.DefaultFormats ++ Traversable(
@@ -46,7 +47,8 @@ object CustomSeriDeseri {
           description = (json \ "description").extract[String],
           metadataEncoding = (json \ "metadataEncoding").extract[String],
           metadata = (json \ "metadata").extract[String],
-          driverName = (json \ "driverName").extract[String]
+          driverName = (json \ "driverName").extract[String],
+          cfg = (json \ "cfg").extract[String]
         )
     }, {
       case dev: DeviceMetadataWithId =>
@@ -56,7 +58,8 @@ object CustomSeriDeseri {
             JField("description", JString(dev.description)) ::
             JField("metadataEncoding", JString(dev.metadataEncoding)) ::
             JField("metadata", JString(dev.metadata)) ::
-            JField("driverName", JString(dev.driverName))
+            JField("driverName", JString(dev.driverName))::
+            JField("cfg", JString(dev.cfg))
             :: Nil)
     }
   ))

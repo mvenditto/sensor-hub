@@ -14,34 +14,34 @@ object EventLogging {
       .subscribe(evt => evt match {
 
       case DeviceCreated(metadata) =>
-        logger.info(s"[${evt.timestamp}] device created: ${metadata.name}[${metadata.id}]")
+        logger.info(s"device created: ${metadata.name}[${metadata.id}]")
 
       case DriverNameConflictWarn(name) =>
-        logger.warn(s"[${evt.timestamp}] skipping $name: name conflicting.")
+        logger.warn(s"skipping $name: name conflicting.")
 
       case DriverLoaded(metadata) =>
-        logger.info(s"[${evt.timestamp}] loaded driver: ${metadata.name}")
+        logger.info(s"loaded driver: ${metadata.name}")
 
       case DriverLoadingError(err, metadata) =>
-        logger.error(s"[${evt.timestamp}] error loading driver ${metadata.name}, cause: ${err.getMessage}")
+        logger.error(s"error loading driver ${metadata.name}, cause: ${err.getMessage}")
 
       case DriverInvalidMetadataError(err) =>
-        logger.error(s"[${evt.timestamp}] invalid metadata: ${err.msg}")
+        logger.error(s"invalid metadata: ${err.msg}")
 
       case DriverInstanced(metadata) =>
-        logger.info(s"[${evt.timestamp}] instanced driver: ${metadata.name}[${metadata.rootDir}]")
+        logger.info(s"instanced driver: ${metadata.name}[${metadata.rootDir}]")
 
       case DriverInstantiationError(err, metadata) =>
-        logger.error(s"[${evt.timestamp}] error instancing driver ${metadata.name}, cause: ${err.getMessage}")
+        logger.error(s"error instancing driver ${metadata.name}, cause: ${err.getMessage}")
 
       case ServiceLoaded(metadata) =>
-        logger.info(s"[${evt.timestamp}] service loaded: ${metadata.name}")
+        logger.info(s"service loaded: ${metadata.name}")
 
       case ServiceLoadingError(err, metadata) =>
-        logger.info(s"[${evt.timestamp}] error loading service ${metadata.name}, cause: ${err.getMessage}")
+        logger.info(s"error loading service ${metadata.name}, cause: ${err.getMessage}")
 
       case e =>
-        logger.info(s"[${e.timestamp}] unknown event: $e")
+        logger.info(s"unknown event: $e")
     })
   }
 

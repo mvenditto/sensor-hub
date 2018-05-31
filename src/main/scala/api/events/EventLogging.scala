@@ -16,6 +16,9 @@ object EventLogging {
       case DeviceCreated(metadata) =>
         logger.info(s"device created: ${metadata.name}[${metadata.id}]")
 
+      case DeviceDeleted(metadata) =>
+        logger.info(s"device deleted: ${metadata.name}[${metadata.id}]")
+
       case DriverNameConflictWarn(name) =>
         logger.warn(s"skipping $name: name conflicting.")
 

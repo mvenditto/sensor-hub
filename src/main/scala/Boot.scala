@@ -57,14 +57,16 @@ class BootDaemon extends Daemon {
 
   override def start(): Unit = {
     Try {
-      val snapshot = new File(".snapshot")
-      if (snapshot.exists()) {
-        parseOpt(Source.fromFile(snapshot).mkString)
-          .map(_.extract[List[DeviceMetadataWithId]])
-          .foreach(devices => devices.foreach(tryRestoreDevice))
+      Await.ready(ServicesManager.runAllServices(), 10 seconds).andThen {
+        case _ =>
+          val snapshot = new File(".snapshot")
+          if (snapshot.exists()) {
+            parseOpt(Source.fromFile(snapshot).mkString)
+              .map(_.extract[List[DeviceMetadataWithId]])
+              .foreach(devices => devices.foreach(tryRestoreDevice))
+          }
       }
 
-      Await.ready(ServicesManager.runAllServices(), 5 seconds)
       import scala.collection.JavaConverters._
       LogManager.getCurrentLoggers.asScala foreach {
         case l: org.apache.log4j.Logger =>

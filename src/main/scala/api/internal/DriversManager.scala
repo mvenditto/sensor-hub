@@ -20,10 +20,14 @@ import scala.tools.reflect._
 
 object DriversManager {
   org.apache.log4j.BasicConfigurator.configure() // dirty log4j conf for debug purpose TODO
+  private[this] implicit val logger: Logger = LoggerFactory.getLogger("sh.drivers-manager")
 
   private[this] val driversDir = Preferences.cfg.driversDir
   val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
+
+  logger.info("loading toolbox...")
   private[this] val tb = runtimeMirror(cl).mkToolBox()
+  logger.info("loading toolbox OK!")
 
   Option(new File(driversDir)).fold(logger.error(s"drivers directory ($driversDir) does not exists!")) {
       _.listFiles()
@@ -33,7 +37,6 @@ object DriversManager {
   }
 
   private val finder = new ResourceFinder("META-INF/", cl)
-  private[this] implicit val logger: Logger = LoggerFactory.getLogger("sh.drivers-manager")
 
   private var driverPackages = Seq.empty[String]
   private var drivers: Map[String, (DriverMetadata, Class[Driver])] = detectAvailableDrivers()

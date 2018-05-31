@@ -34,7 +34,7 @@ class BootDaemon extends Daemon {
 
   val tag =
     """
-       ::: version 0.4.2a :::                         :::           :::
+       ::: version 0.4.3a :::                         :::           :::
         __   ___  _ __   ___   ___   _ __  ___        | |__   _   _ | |__
       / __| / _ \| '_ \ / __| / _ \ |  __|/ __| _____ |  _ \ | | | ||  _ \
       \__ \|  __/| | | |\__ \| (_) || |   \__ \|_____|| | | || |_| || |_) |
@@ -70,7 +70,7 @@ class BootDaemon extends Daemon {
         case l: org.apache.log4j.Logger =>
           if (!l.getName.startsWith("sh.")) l.setLevel(Level.OFF)
       }
-      println(tag)
+      logger.info(tag)
     } recover {
       case err =>
         badShutdown = true
@@ -87,7 +87,7 @@ class BootDaemon extends Daemon {
   }
 
   def tryRestoreDevice(dev: DeviceMetadataWithId): Option[Device] = {
-    logger.info(s"attempt to restore device: $dev")
+    logger.info(s"attempt to restore device: ${dev.name}[cfg:${dev.cfg.nonEmpty}]")
     DriversManager.instanceDriver(dev.driverName).map {
       drv =>
         if (dev.cfg.nonEmpty) {

@@ -9,6 +9,7 @@ import api.events.{EventBus, EventLogging}
 import api.events.SensorsHubEvents._
 import api.internal.MetadataFactory._
 import api.internal.MetadataValidation._
+import api.tasks.TaskSchema
 import api.tasks.oph.TaskSchemaFactory
 import spi.drivers.Driver
 import org.apache.log4j.BasicConfigurator
@@ -52,6 +53,7 @@ object DriversManagerV2{
 
   private[this] val uri = classOf[Driver].getName
   private[this] val finder = new ResourceFinder("META-INF/", jars.getOrElse(Array.empty[URL]):_*)
+  private[this] var tasksCache = Map.empty[String, List[TaskSchema]]
 
   private[this] val driverTags = for {
     props <- finder.mapAllProperties(uri).asScala
@@ -86,16 +88,20 @@ object DriversManagerV2{
   }
 
   private def extractTaskSchemas(tag: DriverTag) = {
-    val tryTasks = Try {
-      val tasks = tag.descriptor.tasks.map(cls => {
+
+    val tasks = () => {
+      val tasks_ = tag.descriptor.tasks.map(cls => {
         tag.classLoader.loadClass(cls.getName)
-          TaskSchemaFactory.createSchema(
-            runtimeMirror(tag.classLoader).classSymbol(cls).toType,
-            tag.classLoader
-          )
-        })
-      tasks
+        TaskSchemaFactory.createSchema(
+          runtimeMirror(tag.classLoader).classSymbol(cls).toType,
+          tag.classLoader
+        )
+      })
+      tasksCache = tasksCache + (tag.id -> tasks_)
+      tasks_
     }
+
+    val tryTasks = Try(tasksCache.getOrElse(tag.id, tasks()))
 
     tryTasks.fold(
       err => EventBus.trigger(DriverInstantiationError(err, tag.metadata)),

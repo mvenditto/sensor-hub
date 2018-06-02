@@ -57,7 +57,7 @@ object DriversManager {
       if driver._1 == name
       desc = driver._2._2.newInstance()
       ctrl <- compileDriverWithObservables(name, desc).toOption
-      schemas = desc.tasks.map(cls => TaskSchemaFactory.createSchema(runtimeMirror(cl).classSymbol(cls).toType))
+      schemas = desc.tasks.map(cls => TaskSchemaFactory.createSchema(runtimeMirror(cl).classSymbol(cls).toType, cl))
     } yield DeviceDriver(ctrl.configurator, ctrl, schemas, drivers(name)._1)).headOption
   }
 

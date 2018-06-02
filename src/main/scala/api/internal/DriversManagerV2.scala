@@ -5,33 +5,37 @@ import java.net.URL
 import java.util.Properties
 
 import api.config.Preferences
-import api.events.EventBus
+import api.events.{EventBus, EventLogging}
 import api.events.SensorsHubEvents._
 import api.internal.MetadataFactory._
 import api.internal.MetadataValidation._
 import api.tasks.oph.TaskSchemaFactory
 import spi.drivers.Driver
-
-import fi.oph.myscalaschema.extraction.ObjectExtractor
+import org.apache.log4j.BasicConfigurator
 import org.apache.xbean.finder.ResourceFinder
 
 import scala.collection.JavaConverters._
 import scala.reflect.internal.util.ScalaClassLoader.URLClassLoader
 import scala.reflect.runtime.universe._
-import scala.tools.reflect._
 import scala.util.Try
 
 object testV2 extends App {
 
+
   import DriversManagerV2.initAndStart
 
+  BasicConfigurator.configure()
   Preferences.configure("sh-prefs.conf")
+  EventLogging.init()
 
   DriversManagerV2
     .instanceDriver("therm1")
-    .map(initAndStart)
-    .map(_.controller.dataStreams.head.doObservation().result)
-    .foreach(println)
+    .map(initAndStart).foreach {
+      drv =>
+        println(drv.controller.dataStreams.head.doObservation().result)
+        println(drv.controller.asInstanceOf[DeviceController with TaskingSupport]
+          .send("dummy-task", """{"message":"prova"}""").blockingGet())
+    }
 }
 
 object DriversManagerV2{
@@ -70,22 +74,28 @@ object DriversManagerV2{
 
   def availableDrivers: Iterable[DriverMetadata] = driverTags.map(_._2.metadata)
 
+  def tagFor(name: String): Option[DriverTag] =
+    driverTags.find(_._2.metadata.name equals name).map(_._2)
+
   def instanceDriver(id: String): Option[DeviceDriverWrapper] = synchronized {
     for {
       tag <- driverTags.get(id)
-      controller <- compileDriver(tag).toOption
+      (controller, configurator) <- compileDriver(tag).toOption
       schemas <- extractTaskSchemas(tag)
-    } yield DeviceDriver(controller.configurator, controller, schemas, tag.metadata)
+    } yield DeviceDriver(configurator, controller, schemas, tag.metadata)
   }
 
   private def extractTaskSchemas(tag: DriverTag) = {
-    ObjectExtractor.overrideClassLoader(tag.classLoader)
     val tryTasks = Try {
-      val tasks = tag.descriptor.tasks.map(cls =>
-        TaskSchemaFactory.createSchema(runtimeMirror(tag.classLoader).classSymbol(cls).toType))
+      val tasks = tag.descriptor.tasks.map(cls => {
+        tag.classLoader.loadClass(cls.getName)
+          TaskSchemaFactory.createSchema(
+            runtimeMirror(tag.classLoader).classSymbol(cls).toType,
+            tag.classLoader
+          )
+        })
       tasks
     }
-    ObjectExtractor.overrideClassLoader(getClass.getClassLoader)
 
     tryTasks.fold(
       err => EventBus.trigger(DriverInstantiationError(err, tag.metadata)),
@@ -114,27 +124,18 @@ object DriversManagerV2{
 
   def getMetadata(id: String): Option[DriverMetadata] = driverTags.get(id).map(_.metadata)
 
-  private def genSourceForCompilation(tag: DriverTag) = {
-    val controllerClass = tag.descriptor.controllerClass.getName
-    val configClass = tag.descriptor.configurationClass.getName
-    s"""
-       | import api.internal.PersistedConfig
-       | import api.internal.{DriversManagerV2 => dm}
-       | val meta = dm.getMetadata("${tag.id}").get
-       | val cfg = new $configClass(meta) with PersistedConfig
-       | new $controllerClass(cfg)
-         """.stripMargin
-  }
-
-  private def compileDriver(tag: DriverTag): Try[DeviceController] = {
+  private def compileDriver(tag: DriverTag): Try[(DeviceController, DeviceConfigurator)] = {
     val tryCompile = Try {
-      val tb = runtimeMirror(tag.classLoader).mkToolBox()
-      (tb eval (tb parse genSourceForCompilation(tag))).asInstanceOf[DeviceController]
+      val configurator =
+        tag.descriptor.configurationClass.getConstructors.head.newInstance(Seq(tag.metadata):_*).asInstanceOf[AnyRef]
+      val controller =
+        tag.descriptor.controllerClass.getConstructors.head.newInstance(Seq(configurator):_*)
+            .asInstanceOf[DeviceController]
+      controller -> new DevConfigAdapter(configurator.asInstanceOf[DeviceConfigurator]) with PersistedConfig
     }
     tryCompile fold(
       err => EventBus.trigger(DriverInstantiationError(err, tag.metadata)),
       _ => EventBus.trigger(DriverInstanced(tag.metadata)))
-
     tryCompile
   }
 }

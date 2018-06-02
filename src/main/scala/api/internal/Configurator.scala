@@ -28,3 +28,9 @@ trait PersistedConfig extends Configurator {
     super.configureRaw(cfgRaw)
   }
 }
+
+class DevConfigAdapter(config: DeviceConfigurator) extends DeviceConfigurator {
+  override def configure(cfgPath: String): Unit = config.configure(cfgPath)
+  override def configureRaw(cfg: String): Unit = config.configureRaw(cfg)
+  override val metadata: DriverMetadata = config.metadata
+}

@@ -4,7 +4,7 @@ import reflect.runtime.universe.Type
 
 trait AbstractTaskSchemaFactory {
 
-  def createSchema[T](tpe: Type): TaskSchema
+  def createSchema[T](tpe: Type, classLoader: ClassLoader): TaskSchema
 
 }
 

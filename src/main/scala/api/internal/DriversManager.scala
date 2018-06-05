@@ -1,143 +1,182 @@
 package api.internal
 
 import java.io.File
+import java.net.{URI, URL}
+import java.nio.file.Paths
+import java.util.Properties
+import java.util.jar.JarFile
 
 import api.config.Preferences
-import api.events.EventBus
+import api.devices.Devices.Device
+import api.devices.DevicesManager
+import api.devices.Sensors.Encodings
+import api.events.{EventBus, EventLogging}
 import api.events.SensorsHubEvents._
 import api.internal.MetadataFactory._
 import api.internal.MetadataValidation._
+import api.tasks.TaskSchema
 import api.tasks.oph.TaskSchemaFactory
-import org.apache.xbean.finder.ResourceFinder
-import org.slf4j.{Logger, LoggerFactory}
+import io.reactivex.subjects.PublishSubject
 import spi.drivers.Driver
+import org.apache.log4j.BasicConfigurator
+import org.apache.xbean.finder.ResourceFinder
 
 import scala.collection.JavaConverters._
-import scala.reflect.internal.util.ScalaClassLoader
+import scala.reflect.internal.util.ScalaClassLoader.URLClassLoader
 import scala.reflect.runtime.universe._
 import scala.util.Try
-import scala.tools.reflect._
 
-object DriversManager {
-  org.apache.log4j.BasicConfigurator.configure() // dirty log4j conf for debug purpose TODO
-  private[this] implicit val logger: Logger = LoggerFactory.getLogger("sh.drivers-manager")
+object testV2 extends App {
 
-  private[this] val driversDir = Preferences.cfg.driversDir
-  val cl = new ScalaClassLoader.URLClassLoader(Seq.empty, getClass.getClassLoader)
 
-  logger.info("loading toolbox...")
-  private[this] val tb = runtimeMirror(cl).mkToolBox()
-  logger.info("loading toolbox OK!")
+  import DriversManager.initAndStart
 
-  Option(new File(driversDir)).fold(logger.error(s"drivers directory ($driversDir) does not exists!")) {
-      _.listFiles()
-      .filter(_.getName.endsWith(".jar"))
-      .map(_.toURI.toURL)
-      .foreach(cl.addURL)
+  BasicConfigurator.configure()
+  Preferences.configure("sh-prefs.conf")
+  EventLogging.init()
+
+  var dev = DriversManager
+    .instanceDriver("dummy-therm-driver")
+    .map(initAndStart)
+    .map(drv =>
+      DevicesManager.createDevice("dev", "", Encodings.PDF, new URI(""), drv)
+    )
+    .get
+
+  dev.dataStreams.head.observable.subscribe(obs => println(obs))
+  println("paused (5 s.)")
+  Thread.sleep(10000)
+  DriversManager.reloadDriver("therm1")
+  /*dev.updateWith(newDriver = DriversManager
+    .instanceDriver("dummy-therm-driver")
+    .map(initAndStart).get)*/
+  println("ok")
+
+}
+
+object DriversManager{
+
+  case class DriverTag(
+    id: String,
+    metadata: DriverMetadata,
+    descriptor: Driver,
+    classLoader: ClassLoader
+  )
+
+  private[this] val jars = Option(new File(Preferences.cfg.driversDir))
+    .map(_.listFiles().filter(_.getName.endsWith(".jar")).map(_.toURI.toURL))
+
+  private[this] val uri = classOf[Driver].getName
+  private[this] val finder = new ResourceFinder("META-INF/", jars.getOrElse(Array.empty[URL]):_*)
+  private[this] var tasksCache = Map.empty[String, List[TaskSchema]]
+
+  private[this] var driverTags = for {
+    props <- finder.mapAllProperties(uri).asScala
+    url <- finder.getResourcesMap(uri).asScala
+    metadata <- extractMetadata(props._2)
+    id = props._1
+    jarURL = new URL(url._2.getFile.split("!").head)
+    classLoader = new URLClassLoader(Seq(jarURL), getClass.getClassLoader)
+    descClass <- loadDescriptor(classLoader, id, metadata)
+  } yield id -> DriverTag(id, metadata, descClass, classLoader)
+
+  def availableDrivers: Iterable[DriverMetadata] = driverTags.map(_._2.metadata)
+
+  def tagFor(name: String): Option[DriverTag] =
+    driverTags.find(_._2.metadata.name equals name).map(_._2)
+
+  def instanceDriver(name: String): Option[DeviceDriverWrapper] = synchronized {
+    for {
+      tag <- driverTags.find(_._2.metadata.name equals name).map(_._2)
+      (controller, configurator) <- compileDriver(tag).toOption
+      schemas <- extractTaskSchemas(tag)
+    } yield DeviceDriver(configurator, controller, schemas, tag.metadata)
   }
 
-  private val finder = new ResourceFinder("META-INF/", cl)
-
-  private var driverPackages = Seq.empty[String]
-  private var drivers: Map[String, (DriverMetadata, Class[Driver])] = detectAvailableDrivers()
-
-  //@GrantWith(classOf[DriverManagementPermission], "drivers.list")
-  def availableDrivers: Iterable[DriverMetadata] = {
-    drivers.map(_._2._1)
-  }
-
-  val safeBoot: (DeviceDriver) => Try[Unit] = (drv: DeviceDriver) => Try {
-    drv.controller.init()
-    drv.controller.start()
-  }
-
-  def instanceDriver(name: String): Option[DeviceDriverWrapper] = {
-    (for {
-      driver <- drivers
-      if driver._1 == name
-      desc = driver._2._2.newInstance()
-      ctrl <- compileDriverWithObservables(name, desc).toOption
-      schemas = desc.tasks.map(cls => TaskSchemaFactory.createSchema(runtimeMirror(cl).classSymbol(cls).toType, cl))
-    } yield DeviceDriver(ctrl.configurator, ctrl, schemas, drivers(name)._1)).headOption
-  }
-
-  private def detectAvailableDrivers() : Map[String, (DriverMetadata, Class[Driver])] = {
-
-    var names = Seq.empty[String]
-
-    def checkNameConflict(name: String): Boolean = {
-      if (names.contains(name)) {
-        EventBus.trigger(DriverNameConflictWarn(name))
-        false
-      } else {
-        names :+= name
-        true
-      }
-    }
-
-    val availableDrivers = for {
-      props <- finder.mapAllProperties(classOf[Driver].getName).asScala
-      metaCheck = validate(create(props._2))
-      _ = metaCheck.fold(err => EventBus.trigger(DriverInvalidMetadataError(err)), _ => ())
-      metadata <- metaCheck.toOption
-      if checkNameConflict(metadata.name)
-      cls <- tryDriverRegistration(metadata).toOption
-    } yield metadata -> cls.asInstanceOf[Class[Driver]]
-
-    availableDrivers map {x => x._1.name -> (x._1, x._2)} toMap
-
-  }
-
-  private def tryDriverRegistration(metadata: DriverMetadata): Try[Class[_]] = {
-    val tryRegistration = Try {
-      if(driverPackages.contains(metadata.descriptorClassName)) {
-        throw new IllegalStateException(s"skipping ${metadata.name}: package clash for: ${metadata.descriptorClassName} (already loaded)")
-      } else {
-        driverPackages :+= metadata.descriptorClassName
-        cl.loadClass(metadata.descriptorClassName)
-      }
-    }
-
-    tryRegistration fold(
-      err => EventBus.trigger(DriverLoadingError(err, metadata)),
-      _ => EventBus.trigger(DriverLoaded(metadata)))
-
-    tryRegistration
-  }
-
-  private def compileDriverWithObservables(name: String, desc: Driver): Try[DeviceController] = {
-    val meta = drivers(name)._1
-    val tryCompile = Try {
-      Seq(desc.controllerClass, desc.configurationClass) foreach {
-        cls =>
-          if (driverPackages.contains(cls.getName) && !drivers.keys.toSeq.contains(name)) {
-            //logger.error(s"class name clash: $cls")
-            throw new IllegalStateException(s"conflict detected! class $cls already present.")
-          } else {
-            driverPackages :+= cls.getName
+   def reloadDriver(id: String): Unit = {
+     var updated = Seq.empty[DriverMetadata]
+     driverTags = driverTags.map(tag => {
+      if (tag._1 equals id) {
+        val x: Option[DriverTag] = finder.getResourcesMap(uri).asScala.get(id).map(url => {
+          val jarURL = new URL(url.getFile.split("!").head)
+          val classLoader = new URLClassLoader(Seq(jarURL), getClass.getClassLoader)
+          val descClass = loadDescriptor(classLoader, id, tag._2.metadata)
+          if (descClass.isDefined) {
+            updated :+= tag._2.metadata
+            DriverTag(tag._1, tag._2.metadata, descClass.get, classLoader)
           }
-      }
+          else tag._2
+        })
+        tag._1 -> x.get
+      } else tag
+    })
+    updated.foreach(metadata => EventBus.trigger(DriverChanged(metadata)))
+  }
 
-      //temp fix to don't brake retro compatibility with drivers
-      val code =
-        s"""
-           | import api.internal.PersistedConfig
-           | import api.internal.{DriversManager => dm}
-           | val meta = dm.availableDrivers.filter(_.name equals "$name").headOption.get
-           | val cfg = new ${desc.configurationClass.getName}(meta) with PersistedConfig
-           | new ${desc.controllerClass.getName}(cfg)
-         """.stripMargin
+  private def extractTaskSchemas(tag: DriverTag) = {
 
-      (tb eval (tb parse code)).asInstanceOf[DeviceController]
-
-      //val cfg = desc.configurationClass.getConstructors.head.newInstance(Seq(meta):_*).asInstanceOf[DeviceConfigurator]
-      //desc.controllerClass.getConstructors.head.newInstance(Seq(cfg):_*).asInstanceOf[DeviceController]
+    val tasks = () => {
+      val tasks_ = tag.descriptor.tasks.map(cls => {
+        tag.classLoader.loadClass(cls.getName)
+        TaskSchemaFactory.createSchema(
+          runtimeMirror(tag.classLoader).classSymbol(cls).toType,
+          tag.classLoader
+        )
+      })
+      tasksCache = tasksCache + (tag.id -> tasks_)
+      tasks_
     }
 
+    val tryTasks = Try(tasksCache.getOrElse(tag.id, tasks()))
+
+    tryTasks.fold(
+      err => EventBus.trigger(DriverInstantiationError(err, tag.metadata)),
+      ok => ())
+
+    tryTasks.toOption
+  }
+
+  private def extractMetadata(props: Properties) = {
+    val metaCheck = validate(create(props))
+    metaCheck.fold(
+      err => EventBus.trigger(DriverInvalidMetadataError(err)),
+      ok => ())
+    metaCheck.toOption
+  }
+
+  private def loadDescriptor(cl: ClassLoader, name: String, metadata: DriverMetadata) = {
+    val descClazz = Try {
+      cl.loadClass(metadata.descriptorClassName).newInstance().asInstanceOf[Driver]
+    }
+    descClazz.fold(
+      err => EventBus.trigger(DriverLoadingError(err, metadata)),
+      ok => EventBus.trigger(DriverLoaded(metadata)))
+    descClazz.toOption
+  }
+
+  def getMetadata(id: String): Option[DriverMetadata] = driverTags.get(id).map(_.metadata)
+
+  private def compileDriver(tag: DriverTag): Try[(DeviceController, DeviceConfigurator)] = {
+    val tryCompile = Try {
+      val configurator =
+        tag.descriptor.configurationClass.getConstructors.head.newInstance(Seq(tag.metadata):_*).asInstanceOf[AnyRef]
+      val controller =
+        tag.descriptor.controllerClass.getConstructors.head.newInstance(Seq(configurator):_*)
+            .asInstanceOf[DeviceController]
+      controller -> new DevConfigAdapter(configurator.asInstanceOf[DeviceConfigurator]) with PersistedConfig
+    }
     tryCompile fold(
-        err => EventBus.trigger(DriverInstantiationError(err, meta)),
-        _ => EventBus.trigger(DriverInstanced(meta)))
-    
+      err => EventBus.trigger(DriverInstantiationError(err, tag.metadata)),
+      _ => EventBus.trigger(DriverInstanced(tag.metadata)))
     tryCompile
+  }
+
+  val initAndStart = (drv: DeviceDriverWrapper) => {
+    Try {
+      drv.controller.init()
+      drv.controller.start()
+      drv
+    }
+    drv
   }
 }

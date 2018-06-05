@@ -2,7 +2,7 @@ package api.internal
 
 import java.util.concurrent.{Executor, ExecutorService, Executors, TimeUnit}
 
-import api.sensors.Sensors.Observation
+import api.devices.Sensors.Observation
 import io.reactivex.disposables.Disposable
 import io.reactivex.{BackpressureStrategy, Flowable, FlowableEmitter}
 

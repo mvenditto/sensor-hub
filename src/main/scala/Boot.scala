@@ -5,12 +5,11 @@ import java.net.URI
 import api.config.Preferences
 import api.config.Preferences.configure
 import api.devices.Devices.Device
+import api.devices.DevicesManager
+import api.devices.Sensors.Encodings
 import api.events.EventLogging
 import api.internal.{DeviceConfigurator, DisposableManager, DriversManager, PersistedConfig}
-import api.sensors.DevicesManager
-import api.sensors.Sensors.Encodings
 import api.services.ServicesManager
-import fi.oph.myscalaschema.extraction.ObjectExtractor
 import org.apache.commons.daemon.{Daemon, DaemonContext}
 import org.apache.log4j.{Level, LogManager}
 import org.json4s.JsonAST.{JField, JInt, JObject, JString}
@@ -47,8 +46,7 @@ class BootDaemon extends Daemon {
   override def init(context: DaemonContext): Unit = {
       configure("sh-prefs.conf")
       if (Preferences.cfg.logEvents) EventLogging.init()
-      ObjectExtractor.overrideClassLoader(DriversManager.cl)
-      //org.apache.log4j.BasicConfigurator.configure()
+      org.apache.log4j.BasicConfigurator.configure()
       System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog")
       System.setProperty("org.eclipse.jetty.LEVEL", "OFF")
       logger.info("attaching graceful shutdown jvm hook...")

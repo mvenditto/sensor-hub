@@ -1,12 +1,12 @@
-package api.sensors
+package api.devices
 
 import java.net.URI
 import java.time.Period
-import java.util.concurrent.TimeUnit
 
 import api.devices.Devices.Device
 import api.internal.Observations
-import io.reactivex.Flowable
+import io.reactivex.subjects.PublishSubject
+import io.reactivex.{BackpressureStrategy, Flowable}
 import org.json4s.JsonAST.JValue
 
 object Sensors {
@@ -86,29 +86,65 @@ object Sensors {
     observationType: ObservationType,
     observedProperty: ObservedProperty)
 
-  case class DataStream(
-    name: String,
-    description: String,
-    unitOfMeasurement: UnitOfMeasurement,
-    featureOfInterest: FeatureOfInterest,
-    observationType: ObservationType,
-    observedProperty: ObservedProperty,
-    procedure: (DataStream) => Observation,
-    sensor: Device = null,
-    observedArea: Option[Any] = None,
-    phenomenonTime: Option[Long] = None,
-    resultTime: Option[Long] = None
+  class DataStream private (
+    val name: String,
+    val description: String,
+    val unitOfMeasurement: UnitOfMeasurement,
+    val featureOfInterest: FeatureOfInterest,
+    val observationType: ObservationType,
+    val observedProperty: ObservedProperty,
+    val procedure: (DataStream) => Observation,
+    val sensor: Device = null,
+    val observedArea: Option[Any] = None,
+    val phenomenonTime: Option[Long] = None,
+    val resultTime: Option[Long] = None,
+    obsSubject: Option[PublishSubject[Observation]] = None
   ) {
 
-    val doObservation: () => Observation = () =>  procedure(this)
+    protected implicit val self: DataStream = this
+    protected def doObservationBinded()(implicit ds: DataStream) = procedure(ds)
 
-    def newObservableSampled(sampleRate: Long, initDelay: Long = 0,
-      unit: TimeUnit = TimeUnit.MILLISECONDS): Flowable[Observation] = {
-      Observations.atSampleRate(doObservation, sampleRate, initDelay, unit)
+    val doObservation: () => Observation = () =>  doObservationBinded()
+
+    private val subj = obsSubject getOrElse PublishSubject.create[Observation]
+    private var obsEmitter =
+      Observations.atSampleRate(doObservation, 1000).subscribe(obs => subj.onNext(obs))
+
+    lazy val observable: Flowable[Observation] = subj.toFlowable(BackpressureStrategy.LATEST)
+
+    def updateWith(
+      newName: String = name,
+      newDescription: String = description,
+      newFeatureOfInterest: FeatureOfInterest = featureOfInterest,
+      newSensor: Device = sensor,
+      newProcedure: (DataStream) => Observation = procedure
+    ): DataStream = {
+      obsEmitter.dispose()
+      println(s"copied: newProcedure ${newProcedure(this).result}")
+      new DataStream(
+        newName, newDescription, unitOfMeasurement, newFeatureOfInterest, observationType,
+        observedProperty, newProcedure, newSensor, observedArea, phenomenonTime, resultTime,
+        Some(subj))
     }
 
-    lazy val observable: Flowable[Observation] =
-      Observations.atSampleRate(doObservation, 1000)
+  }
+  object DataStream {
+    def apply(
+      name: String,
+      description: String,
+      unitOfMeasurement: UnitOfMeasurement,
+      featureOfInterest: FeatureOfInterest,
+      observationType: ObservationType,
+      observedProperty: ObservedProperty,
+      procedure: (DataStream) => Observation,
+      sensor: Device = null,
+      observedArea: Option[Any] = None,
+      phenomenonTime: Option[Long] = None,
+      resultTime: Option[Long] = None
+    ): DataStream = new DataStream(
+      name, description, unitOfMeasurement, featureOfInterest, observationType,
+      observedProperty, procedure, sensor, observedArea, phenomenonTime, resultTime
+    )
   }
 
   case class ObservedProperty(

@@ -29,6 +29,8 @@ object SensorsHubEvents {
 
   case class DriverInstanced(metadata: DriverMetadata) extends Info
 
+  case class DriverChanged(metadata: DriverMetadata) extends Info
+
   case class DriverInstantiationError(t: Throwable, metadata: DriverMetadata) extends Error
 
   case class ServiceLoaded(metadata: ServiceMetadata) extends Info

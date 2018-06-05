@@ -3,9 +3,9 @@ package utils
 import java.net.URI
 import java.time.Instant
 
+import api.devices.DevicesManager
 import api.events.SensorsHubEvents.SensorsHubEvent
-import api.sensors.DevicesManager
-import api.sensors.Sensors._
+import api.devices.Sensors._
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods.compact

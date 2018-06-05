@@ -21,7 +21,7 @@ trait TaskingSupport extends DeviceController {
       name -> s
     }):_*)*/
 
-  private lazy val schemas = DriversManagerV2
+  private lazy val schemas = DriversManager
     .tagFor(configurator.metadata.name)
     .map {
       tag =>
@@ -31,8 +31,6 @@ trait TaskingSupport extends DeviceController {
           name -> s
         }):_*)
     }.getOrElse(Map.empty[String,TaskSchema])
-
-  println(schemas)
 
   protected val answer: PartialFunction[Any, Either[Option[String], Throwable]]
 

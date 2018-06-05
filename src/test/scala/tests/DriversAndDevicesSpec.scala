@@ -2,11 +2,11 @@ package tests
 
 import java.net.URI
 
+import api.devices.DevicesManager
 import api.events.EventBus
 import api.events.SensorsHubEvents.DeviceDeleted
 import api.internal.{DeviceController, DriversManager, TaskingSupport}
-import api.sensors.DevicesManager
-import api.sensors.Sensors.Encodings
+import api.devices.Sensors.Encodings
 import api.services.ServicesManager
 import org.scalatest.FlatSpec
 
@@ -20,11 +20,11 @@ class DriversAndDevicesSpec extends FlatSpec with SensorsHubInit {
   }
 
   it should "instance a valid driver among the available ones" in {
-    assert(DriversManager.instanceDriver("dummy-therm-driver").isDefined)
+    assert(DriversManager.instanceDriver("therm1").isDefined)
   }
 
   "the DevicesManager" should "create a Device provided a valid driver" in {
-    assert(DriversManager.instanceDriver("dummy-therm-driver")
+    assert(DriversManager.instanceDriver("therm1")
       .map(drv => {
         drv.controller.init()
         drv.controller.start()
@@ -38,7 +38,7 @@ class DriversAndDevicesSpec extends FlatSpec with SensorsHubInit {
                 	"0.20" = "30.0"
                 	"0.05" = "50.0"
                 }"""
-    assert(DriversManager.instanceDriver("dummy-therm-driver")
+    assert(DriversManager.instanceDriver("therm1")
       .map(drv => {
         drv.config.configureRaw(cfg)
         drv.controller.init()
@@ -49,7 +49,7 @@ class DriversAndDevicesSpec extends FlatSpec with SensorsHubInit {
 
   it should "be configured providing also by a .conf file" in {
     val cfg = "src/test/assets/conf.conf"
-    assert(DriversManager.instanceDriver("dummy-therm-driver")
+    assert(DriversManager.instanceDriver("therm1")
       .map(drv => {
         drv.config.configure(cfg)
         drv.controller.init()

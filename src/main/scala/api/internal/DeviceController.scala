@@ -2,7 +2,7 @@ package api.internal
 
 import java.io.File
 
-import api.sensors.Sensors._
+import api.devices.Sensors._
 import org.json4s.Formats
 import org.json4s.JsonAST.{JField, JObject, JString}
 import org.json4s.jackson.JsonMethods.{pretty, parse}
@@ -10,11 +10,8 @@ import utils.CustomSeriDeseri
 
 import scala.io.Source
 
-trait Manifest {
-  def dataStreamsFromManifest(dc: DeviceController, manifestPath: String): Seq[DataStream]
-}
 
-trait JsonManifest extends Manifest {
+trait JsonManifest {
 
   private implicit val fmts: Formats = CustomSeriDeseri.fmt
 
@@ -24,7 +21,7 @@ trait JsonManifest extends Manifest {
     method.get(dc).asInstanceOf[(DataStream) => Observation]
   }
 
-  override def dataStreamsFromManifest(dc: DeviceController, manifestPath: String): Seq[DataStream] = {
+  def dataStreamsFromManifest(dc: DeviceController, manifestPath: String): Seq[DataStream] = {
     val src = Source.fromFile(new File(manifestPath)).mkString
     val json = parse(src)
 
@@ -50,8 +47,7 @@ trait DeviceController extends JsonManifest {
 
   val configurator: DeviceConfigurator
 
-  lazy val _dataStreams =
-    dataStreamsFromManifest(this, configurator.metadata.rootDir)
+  lazy val _dataStreams = dataStreamsFromManifest(this, configurator.metadata.rootDir)
 
   def dataStreams: Iterable[DataStream] = _dataStreams
 

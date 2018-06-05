@@ -1,8 +1,8 @@
-package api.sensors
+package api.devices
 
 import java.net.URI
 
-import api.sensors.Sensors.UnitOfMeasurement
+import api.devices.Sensors.UnitOfMeasurement
 
 object UCUM {
 

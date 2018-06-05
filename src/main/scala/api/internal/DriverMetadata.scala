@@ -5,7 +5,7 @@ import java.nio.file.Paths
 import java.util.Properties
 
 import api.config.Preferences
-import api.sensors.Sensors._
+import api.devices.Sensors._
 import org.json4s.JsonAST.{JField, JObject, JString}
 import org.json4s.jackson.JsonMethods.parse
 

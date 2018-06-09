@@ -2,7 +2,7 @@
 
 ## TODOs List :ballot_box_with_check:
 - [x] global *configuration* management
-- [ ] enhance services bootstrap phase (threads?, load order?, service hearthbeat?) **[WIP]**
+- [ ] enhance services bootstrap phase **[WIP]**
 - [x] rethink *feature of interest* attachment to *observations* (move out from drivers level)
 - [ ] add more checks on argument while creating resources (eg. createDevice ecc...) 
 - [x] introduction of *session* concept and session recovery (separated service?) 
@@ -16,6 +16,3 @@
 - [x] add a default backpressure strategyy to Observation streams from sensors
 - [x] investigate other possible issues with memory/cpu usage (rx threading ecc...)
 
-# Coverage
-
-[![codecov](https://codecov.io/gh/mvenditto/sensor-hub/branch/master/graphs/icicle.svg?token=Nj3INWZgrw)](https://codecov.io/gh/mvenditto/sensor-hub/branch/master/graphs/icicle.svg?token=Nj3INWZgrw)

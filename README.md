@@ -1,5 +1,29 @@
 # sensor-hub [![codecov](https://codecov.io/gh/mvenditto/sensor-hub/branch/master/graph/badge.svg?token=Nj3INWZgrw)](https://codecov.io/gh/mvenditto/sensor-hub)
 
+
+## Directory structure
+```
+\<sensor-hub home>
+    \bin
+      sensor-hub.jar
+      sh-prefs.conf
+    \ext
+      \drivers
+        driver-name.jar
+        driver-name.json
+      \services
+        \<service-name>
+          service-name.jar
+```
+  
+## Running
+ - *java -jar sensor-hub.jar*
+ - running as a OS *daemon*: [see](https://github.com/mvenditto/sensor-hub/wiki/Running)
+ - configuration: *sh-prefs.conf*
+ - web interface (optional): @ *localhost:8081/sh-admin.html* (default)
+    - [REST server](https://github.com/mvenditto/sensor-hub_rest-server)
+    - [REST server front-end](https://github.com/mvenditto/sensor-hub_rest-service-frontend)
+
 ## TODOs List :ballot_box_with_check:
 - [x] global *configuration* management
 - [ ] enhance services bootstrap phase **[WIP]**

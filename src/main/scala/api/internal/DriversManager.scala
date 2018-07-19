@@ -8,6 +8,7 @@ import api.events.SensorsHubEvents._
 import api.internal.MetadataFactory._
 import api.internal.MetadataValidation._
 import api.tasks.oph.TaskSchemaFactory
+import io.reactivex.disposables.Disposable
 import org.apache.xbean.finder.ResourceFinder
 import org.slf4j.{Logger, LoggerFactory}
 import spi.drivers.Driver
@@ -52,13 +53,25 @@ object DriversManager {
   }
 
   def instanceDriver(name: String): Option[DeviceDriverWrapper] = {
-    (for {
+    val driver = (for {
       driver <- drivers
       if driver._1 == name
       desc = driver._2._2.newInstance()
       ctrl <- compileDriverWithObservables(name, desc).toOption
       schemas = desc.tasks.map(cls => TaskSchemaFactory.createSchema(runtimeMirror(cl).classSymbol(cls).toType))
     } yield DeviceDriver(ctrl.configurator, ctrl, schemas, drivers(name)._1)).headOption
+    driver.fold(Option.empty[DeviceDriverWrapper]){
+      drv =>
+        DisposableManager.add(new Disposable {
+          private[this] var disposed = false
+          override def dispose(): Unit = {
+            disposed = true
+            drv.controller.stop()
+          }
+          override def isDisposed: Boolean = disposed
+        })
+        driver
+    }
   }
 
   private def detectAvailableDrivers() : Map[String, (DriverMetadata, Class[Driver])] = {

@@ -151,7 +151,8 @@ class BootDaemon extends Daemon {
         _ => ()
       ))
 
-    logger.info("disposing resources...")
+    val nres = DisposableManager.getDisposablesNum()
+    logger.info(s"disposing #$nres resources...")
     DisposableManager.disposeAll()
 
     logger.info("bye")
